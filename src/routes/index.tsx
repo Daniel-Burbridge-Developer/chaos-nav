@@ -1,7 +1,10 @@
 // src/routes/__root.tsx or wherever your Home component is located
 import { createFileRoute } from '@tanstack/react-router';
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query'; // useQueryClient is still useful for other purposes, though not strictly needed for this specific `enabled` check
+import React, { useState, useEffect, useRef } from 'react';
+import { useQuery, QueryClient, useQueryClient } from '@tanstack/react-query';
+import { queryObjects } from 'v8';
+// Removed createServerFn as it's no longer used for fetchStopSuggestions in this file
+// Removed db and drizzle-orm imports as they are no longer needed in this file
 
 interface BusTimeItem {
   liveStatus: boolean;
@@ -39,27 +42,25 @@ const fetchStopData = async (stopNumber: string): Promise<BusTimeItem[]> => {
   }
 };
 
+// Now fetches from the new API route
 const fetchStopSuggestions = async (
   query: string
 ): Promise<StopSuggestion[]> => {
-  // Prevent API call if query is too short (client-side check)
   if (!query || query.length < 3) {
+    // Return an empty array or handle as needed when query is too short
     return [];
   }
   try {
-    console.log(
-      `[Client] Fetching stop suggestions for "${query}" from API...`
-    ); // Added console log
-    const response = await fetch(`/api/busstop-info/${query}`);
+    // The API route will handle the DB querying
+    const response = await fetch(`/api/busstop-info/${query}`); // Note the changed path
     const data = await response.json();
     if (!response.ok) {
-      console.error('API Error fetching stop suggestions:', data);
       throw new Error(data.error || 'Failed to fetch stop suggestions');
     }
     return data.data;
   } catch (error) {
     console.error('Error fetching stop suggestions from API route:', error);
-    return [];
+    return []; // Return empty array on error
   }
 };
 
@@ -72,37 +73,27 @@ function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // queryClient can be used for manual cache interactions, not strictly needed for the enabled check here
-  // const queryClient = useQueryClient();
-
+  // Check if this queryKey has cached data
+  const queryClient = useQueryClient();
+  const hasCachedSuggestions = !!queryClient.getQueryData<StopSuggestion[]>([
+    'stopSuggestions',
+    debouncedInput,
+  ]);
   const {
     data: suggestions = [],
     isFetching,
     error,
-    // The `isInitialLoading` can be useful to differentiate first load vs. subsequent fetches
-    // isInitialLoading,
   } = useQuery<StopSuggestion[], Error>({
     queryKey: ['stopSuggestions', debouncedInput],
     queryFn: () => fetchStopSuggestions(debouncedInput),
-    enabled: debouncedInput.length >= 3, // Only enable if input is long enough
-    // staleTime: Infinity, // This is now handled globally in `main.tsx` persistence options
-    // cacheTime: Infinity, // This is now handled globally in `main.tsx` persistence options
+    enabled: debouncedInput.length >= 3 && !hasCachedSuggestions,
+    staleTime: Infinity,
     retry: false,
   });
 
   const addStop = () => {
     const trimmed = inputValue.trim();
-    // Before adding, try to find an exact match in current suggestions
-    const exactMatch = suggestions.find(
-      (s) =>
-        s.number === trimmed || s.name.toLowerCase() === trimmed.toLowerCase()
-    );
-
-    if (exactMatch && !stops.includes(exactMatch.number)) {
-      setStops([...stops, exactMatch.number]);
-      setInputValue('');
-      setShowSuggestions(false);
-    } else if (trimmed && !stops.includes(trimmed)) {
+    if (trimmed && !stops.includes(trimmed)) {
       setStops([...stops, trimmed]);
       setInputValue('');
       setShowSuggestions(false);
@@ -120,11 +111,6 @@ function Home() {
       if (!suggestionsRef.current?.contains(document.activeElement))
         setShowSuggestions(false);
     }, 100);
-
-  const displaySuggestions = useMemo(() => {
-    if (!inputValue || inputValue.length < 3) return [];
-    return suggestions;
-  }, [inputValue, suggestions]);
 
   return (
     <div className='min-h-screen bg-zinc-900 text-zinc-100 p-6 flex flex-col items-center'>
@@ -151,29 +137,27 @@ function Home() {
             Add Stop
           </button>
 
-          {showSuggestions &&
-            Array.isArray(displaySuggestions) &&
-            displaySuggestions.length > 0 && (
-              <div
-                ref={suggestionsRef}
-                className='absolute z-10 w-full top-full mt-2 bg-zinc-700 border border-zinc-600 rounded-lg shadow-lg max-h-60 overflow-y-auto'
-              >
-                {displaySuggestions.map((s: StopSuggestion) => (
-                  <div
-                    key={s.id}
-                    onClick={() => handleSelect(s)}
-                    className='p-3 hover:bg-zinc-600 cursor-pointer border-b border-zinc-600'
-                  >
-                    <p className='text-white font-semibold'>{s.name}</p>
-                    <p className='text-zinc-400 text-sm'>
-                      Stop Number: {s.number}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+          {showSuggestions && suggestions.length > 0 && (
+            <div
+              ref={suggestionsRef}
+              className='absolute z-10 w-full top-full mt-2 bg-zinc-700 border border-zinc-600 rounded-lg shadow-lg max-h-60 overflow-y-auto'
+            >
+              {suggestions.map((s) => (
+                <div
+                  key={s.id}
+                  onClick={() => handleSelect(s)}
+                  className='p-3 hover:bg-zinc-600 cursor-pointer border-b border-zinc-600'
+                >
+                  <p className='text-white font-semibold'>{s.name}</p>
+                  <p className='text-zinc-400 text-sm'>
+                    Stop Number: {s.number}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
 
-          {isFetching && debouncedInput.length >= 3 && (
+          {isFetching && (
             <p className='absolute mt-2 text-sm text-zinc-400'>
               Loading suggestions...
             </p>
