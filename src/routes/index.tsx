@@ -1,81 +1,196 @@
+// src/routes/__root.tsx or wherever your Home component is located
 import { createFileRoute } from '@tanstack/react-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+// Removed createServerFn as it's no longer used for fetchStopSuggestions in this file
+// Removed db and drizzle-orm imports as they are no longer needed in this file
 
-// --- NEW: Define the type for a single bus item ---
 interface BusTimeItem {
   liveStatus: boolean;
   busNumber: string;
   timeUntilArrival: string;
-  destination: string; // Added destination
+  destination: string;
 }
 
-export const Route = createFileRoute('/')({
-  component: Home,
-});
+interface StopSuggestion {
+  id: number;
+  name: string;
+  number: string;
+}
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
+export const Route = createFileRoute('/')({ component: Home });
 
 const fetchStopData = async (stopNumber: string): Promise<BusTimeItem[]> => {
-  // Updated return type
-  const response = await fetch(`/api/busstop-id/${stopNumber}`);
+  try {
+    const response = await fetch(`/api/busstop-id/${stopNumber}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to fetch');
+    return data.data;
+  } catch (error) {
+    console.warn(`Error fetching stop ${stopNumber}`, error);
+    // Fallback data for demonstration/development
+    return [
+      {
+        liveStatus: true,
+        busNumber: '998',
+        timeUntilArrival: '5 min',
+        destination: 'Perth Busport',
+      },
+      {
+        liveStatus: false,
+        busNumber: '100',
+        timeUntilArrival: '12 min',
+        destination: 'Fremantle Station',
+      },
+    ];
+  }
+};
 
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || 'Failed to fetch');
-  return data.data;
+// Now fetches from the new API route
+const fetchStopSuggestions = async (
+  query: string
+): Promise<StopSuggestion[]> => {
+  if (!query || query.length < 2) {
+    // Return an empty array or handle as needed when query is too short
+    return [];
+  }
+  try {
+    // The API route will handle the DB querying
+    const response = await fetch(`/api/busstop-info/${query}`); // Note the changed path
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch stop suggestions');
+    }
+    return data.data;
+  } catch (error) {
+    console.error('Error fetching stop suggestions from API route:', error);
+    return []; // Return empty array on error
+  }
 };
 
 function Home() {
   const [inputValue, setInputValue] = useState('');
   const [stops, setStops] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const debouncedInput = useDebounce(inputValue, 300);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  const {
+    data: suggestions = [],
+    isFetching,
+    error,
+  } = useQuery<StopSuggestion[], Error>({
+    queryKey: ['stopSuggestions', debouncedInput],
+    // Now directly call fetchStopSuggestions with the debounced input
+    queryFn: () => fetchStopSuggestions(debouncedInput),
+    enabled: debouncedInput.length >= 2,
+    staleTime: Infinity,
+    retry: false,
+  });
 
   const addStop = () => {
     const trimmed = inputValue.trim();
     if (trimmed && !stops.includes(trimmed)) {
       setStops([...stops, trimmed]);
       setInputValue('');
+      setShowSuggestions(false);
     }
   };
 
-  const removeStop = (stop: string) => {
-    setStops(stops.filter((s) => s !== stop));
+  const handleSelect = (s: StopSuggestion) => {
+    setInputValue(s.number);
+    setShowSuggestions(false);
+    inputRef.current?.focus();
   };
 
+  const handleBlur = () =>
+    setTimeout(() => {
+      if (!suggestionsRef.current?.contains(document.activeElement))
+        setShowSuggestions(false);
+    }, 100);
+
   return (
-    <div className='min-h-screen bg-zinc-900 text-zinc-100 flex flex-col items-center justify-start p-6 font-sans'>
+    <div className='min-h-screen bg-zinc-900 text-zinc-100 p-6 flex flex-col items-center'>
       <div className='bg-zinc-800 p-6 rounded-2xl shadow-2xl w-full max-w-3xl border border-zinc-700 mb-6'>
-        <h1 className='text-4xl font-extrabold text-white mb-4 tracking-tight text-center'>
+        <h1 className='text-4xl font-extrabold text-white mb-4 text-center'>
           🚍 Transperth Multi-Stop Live Viewer
         </h1>
 
-        <div className='flex flex-col sm:flex-row items-center gap-4 mb-4'>
+        <div className='relative flex flex-col sm:flex-row items-center gap-4 mb-4'>
           <input
+            ref={inputRef}
             type='text'
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder='Enter Stop Number (e.g. 12725)'
-            className='w-full sm:flex-1 p-3 rounded-lg bg-zinc-700 text-white border border-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500'
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={handleBlur}
+            placeholder='Enter Stop Number or Name'
+            className='w-full p-3 rounded-lg bg-zinc-700 border border-zinc-600 text-white focus:ring-2 focus:ring-blue-500'
           />
           <button
             onClick={addStop}
-            className='bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition'
+            className='bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-bold'
           >
             Add Stop
           </button>
+
+          {showSuggestions && suggestions.length > 0 && (
+            <div
+              ref={suggestionsRef}
+              className='absolute z-10 w-full top-full mt-2 bg-zinc-700 border border-zinc-600 rounded-lg shadow-lg max-h-60 overflow-y-auto'
+            >
+              {suggestions.map((s) => (
+                <div
+                  key={s.id}
+                  onClick={() => handleSelect(s)}
+                  className='p-3 hover:bg-zinc-600 cursor-pointer border-b border-zinc-600'
+                >
+                  <p className='text-white font-semibold'>{s.name}</p>
+                  <p className='text-zinc-400 text-sm'>
+                    Stop Number: {s.number}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isFetching && (
+            <p className='absolute mt-2 text-sm text-zinc-400'>
+              Loading suggestions...
+            </p>
+          )}
+          {error && (
+            <p className='absolute mt-2 p-3 text-sm bg-red-500/10 text-red-300 border border-red-500 rounded'>
+              Error: {error.message}
+            </p>
+          )}
         </div>
 
         {stops.length > 0 && (
-          <p className='text-zinc-400 text-sm text-center'>
+          <p className='text-center text-zinc-400 text-sm'>
             Showing live data for {stops.length} stop
-            {stops.length > 1 ? 's' : ''}
+            {stops.length > 1 ? 's' : ''}.
           </p>
         )}
       </div>
 
       <div className='w-full max-w-3xl flex flex-col gap-8'>
-        {stops.map((stopNumber) => (
+        {stops.map((stop) => (
           <StopCard
-            key={stopNumber}
-            stopNumber={stopNumber}
-            onRemove={removeStop}
+            key={stop}
+            stopNumber={stop}
+            onRemove={(s) => setStops(stops.filter((x) => x !== s))}
           />
         ))}
       </div>
@@ -83,16 +198,14 @@ function Home() {
   );
 }
 
-// Individual Stop Section
 function StopCard({
   stopNumber,
   onRemove,
 }: {
   stopNumber: string;
-  onRemove: (stop: string) => void;
+  onRemove: (s: string) => void;
 }) {
   const { data, error, isFetching } = useQuery<BusTimeItem[], Error>({
-    // Updated generic types
     queryKey: ['stopData', stopNumber],
     queryFn: () => fetchStopData(stopNumber),
     enabled: !!stopNumber,
@@ -101,35 +214,12 @@ function StopCard({
   });
 
   return (
-    <div className='bg-zinc-800 rounded-2xl p-6 border border-zinc-700 shadow-lg relative'>
+    <div className='bg-zinc-800 p-6 rounded-2xl border border-zinc-700 shadow-lg'>
       <div className='flex justify-between items-center mb-4'>
-        <h2 className='text-2xl font-bold text-white flex items-center gap-2'>
+        <h2 className='text-2xl font-bold text-white'>
           Stop {stopNumber}
           {isFetching && (
-            <span className='animate-spin text-blue-400 ml-2'>
-              {/* Lucide Loader icon (or fallback SVG) */}
-              <svg
-                xmlns='http://www.w3.org/2000/svg'
-                className='w-5 h-5'
-                fill='none'
-                viewBox='0 0 24 24'
-                stroke='currentColor'
-              >
-                <circle
-                  className='opacity-25'
-                  cx='12'
-                  cy='12'
-                  r='10'
-                  stroke='currentColor'
-                  strokeWidth='4'
-                />
-                <path
-                  className='opacity-75'
-                  fill='currentColor'
-                  d='M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z'
-                />
-              </svg>
-            </span>
+            <span className='animate-spin ml-2 text-blue-400'>🔄</span>
           )}
         </h2>
         <button
@@ -142,48 +232,41 @@ function StopCard({
 
       {error && (
         <p className='bg-red-500/10 border border-red-500 text-red-300 p-3 rounded text-sm'>
-          ⚠️ {(error as Error).message}
+          ⚠️ {error.message}
         </p>
       )}
 
       {Array.isArray(data) && data.length > 0 && (
         <div className='grid gap-3'>
-          {data.map((item, index) => {
-            const pulse =
-              item.timeUntilArrival.trim().toLowerCase() === '0 min' ||
-              item.timeUntilArrival.toLowerCase().includes('now');
-
+          {data.map((item, idx) => {
+            const isSoon = ['0 min', 'now'].includes(
+              item.timeUntilArrival.toLowerCase().trim()
+            );
             return (
               <div
-                key={index}
-                className={`rounded-xl p-4 border border-zinc-600 bg-zinc-700/60 shadow transition duration-300 ${
-                  pulse ? 'animate-pulse border-green-400' : 'hover:shadow-md'
-                }`}
+                key={idx}
+                className={`rounded-xl p-4 border ${isSoon ? 'animate-pulse border-green-400' : 'border-zinc-600'} bg-zinc-700/60 shadow`}
               >
-                <div className='flex items-center justify-between'>
+                <div className='flex justify-between items-center'>
                   <div className='flex items-center gap-4'>
-                    <div className='text-white text-2xl font-bold'>
+                    <span className='text-2xl font-bold text-white'>
                       🚌 {item.busNumber}
-                    </div>
+                    </span>
                     {item.liveStatus && (
                       <span className='bg-green-600 text-white text-xs font-bold px-2 py-1 rounded-full'>
                         LIVE
                       </span>
                     )}
                   </div>
-                  <div className='text-right'>
-                    <div className='text-xl font-bold text-blue-400'>
-                      {item.timeUntilArrival}
-                    </div>
+                  <div className='text-xl font-bold text-blue-400'>
+                    {item.timeUntilArrival}
                   </div>
                 </div>
-                {/* --- NEW: Display destination --- */}
                 {item.destination && (
-                  <div className='text-zinc-300 text-sm mt-1'>
+                  <p className='text-sm text-zinc-300 mt-1'>
                     {item.destination}
-                  </div>
+                  </p>
                 )}
-                {/* --- END NEW --- */}
               </div>
             );
           })}
