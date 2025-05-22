@@ -1,0 +1,11 @@
+import { sqliteTable, integer, text, index } from 'drizzle-orm/sqlite-core';
+
+export const stops = sqliteTable(
+  'stops',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    number: text('number').notNull(),
+  },
+  (stops) => [index('number_idx').on(stops.number)]
+);
