@@ -1,7 +1,6 @@
 import { json } from '@tanstack/react-start';
 import { createAPIFileRoute } from '@tanstack/react-start/api';
-import { chromium } from 'playwright';
-import * as cheerio from 'cheerio';
+import * as cheerio from 'cheerio'; // Keep cheerio
 
 export const APIRoute = createAPIFileRoute('/api/scrape')({
   POST: async ({ request }) => {
@@ -14,19 +13,24 @@ export const APIRoute = createAPIFileRoute('/api/scrape')({
       const url = `https://136213.mobi/RealTime/RealTimeStopResults.aspx?SN=${stopNumber}`;
       console.log('Scraping:', url);
 
-      const browser = await chromium.launch({ headless: true });
-      const page = await browser.newPage();
-      await page.goto(url, { waitUntil: 'load', timeout: 15000 });
+      // --- REPLACE PLAYWRIGHT CODE WITH FETCH ---
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch page: ${response.statusText}`);
+      }
+      const rawHtml = await response.text();
+      // --- END REPLACE ---
 
-      await page.waitForTimeout(1000);
+      const $ = cheerio.load(rawHtml);
+      const timetableElement = $('#pnlStopTimetable');
 
-      const element = await page.$('#pnlStopTimetable');
-      if (!element) throw new Error('#pnlStopTimetable not found');
+      if (timetableElement.length === 0) {
+        throw new Error(
+          '#pnlStopTimetable not found in the fetched HTML. Playwright might be needed.'
+        );
+      }
 
-      const rawHtml = await element.evaluate((el) => el.outerHTML);
-      await browser.close();
-
-      const parsedData = parseTimetableHtml(rawHtml);
+      const parsedData = parseTimetableHtml(timetableElement.html() || ''); // Use .html() to get the inner HTML of the element
 
       return json({ data: parsedData });
     } catch (err: any) {
