@@ -1,11 +1,13 @@
 import { json } from '@tanstack/react-start';
 import { createAPIFileRoute } from '@tanstack/react-start/api';
-import * as cheerio from 'cheerio'; // Keep cheerio
+import * as cheerio from 'cheerio';
 
-export const APIRoute = createAPIFileRoute('/api/scrape')({
-  POST: async ({ request }) => {
+export const APIRoute = createAPIFileRoute('/api/busstop-id/$stopNumber')({
+  GET: async ({ params }) => {
+    // Change from POST to GET, and use params
     try {
-      const { stopNumber } = await request.json();
+      const { stopNumber } = params; // Access the dynamic segment from params
+
       if (!stopNumber) {
         return json({ error: 'Missing stop number' }, { status: 400 });
       }
@@ -13,24 +15,29 @@ export const APIRoute = createAPIFileRoute('/api/scrape')({
       const url = `https://136213.mobi/RealTime/RealTimeStopResults.aspx?SN=${stopNumber}`;
       console.log('Scraping:', url);
 
-      // --- REPLACE PLAYWRIGHT CODE WITH FETCH ---
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch page: ${response.statusText}`);
       }
       const rawHtml = await response.text();
-      // --- END REPLACE ---
 
       const $ = cheerio.load(rawHtml);
       const timetableElement = $('#pnlStopTimetable');
 
       if (timetableElement.length === 0) {
-        throw new Error(
-          '#pnlStopTimetable not found in the fetched HTML. Playwright might be needed.'
+        // If the element isn't found, it might indicate that Playwright was actually needed
+        // or the page structure has changed, or it's a temporary issue.
+        // It's good to log this for debugging.
+        console.warn(
+          `#pnlStopTimetable not found for stop number: ${stopNumber}.`
+        );
+        return json(
+          { error: 'Failed to find timetable data on the page.' },
+          { status: 500 }
         );
       }
 
-      const parsedData = parseTimetableHtml(timetableElement.html() || ''); // Use .html() to get the inner HTML of the element
+      const parsedData = parseTimetableHtml(timetableElement.html() || '');
 
       return json({ data: parsedData });
     } catch (err: any) {
