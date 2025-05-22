@@ -1,3 +1,4 @@
+// src/routes/__root.tsx
 import {
   HeadContent,
   Link,
@@ -10,9 +11,48 @@ import * as React from 'react';
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary';
 import { NotFound } from '~/components/NotFound';
 import appCss from '~/styles/app.css?url';
-import { seo } from '~/utils/seo';
+import { seo } from '~/utils/seo'; // Corrected import syntax for seo
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Analytics } from '@vercel/analytics/react';
+
+// Import persistence libraries
+import { persistQueryClient } from '@tanstack/query-persist-client-core';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+
+// Create a client instance outside the component to ensure it's a singleton
+// and can be used for persistence setup.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Default cache time for general queries (e.g., 5 minutes)
+      // This can be overridden per useQuery call if needed
+      staleTime: 0, // Default to 0, or a small value if most data isn't static
+    },
+  },
+});
+
+// Create a persister for localStorage
+// Ensure this runs only in a browser environment
+const persister = createSyncStoragePersister({
+  storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+});
+
+// Persist the query client
+// This block ensures persistence is set up once when the app loads
+if (typeof window !== 'undefined') {
+  persistQueryClient({
+    queryClient,
+    persister,
+    maxAge: Infinity, // Keep persisted cache indefinitely for static data
+    buster: 'v1', // Increment this string ('v1', 'v2', etc.) if your stop data changes or schema updates
+    dehydrateOptions: {
+      // Only dehydrate/persist queries with 'stopSuggestions' in their queryKey
+      shouldDehydrateQuery: (query) =>
+        query.queryKey[0] === 'stopSuggestions' &&
+        query.state.data !== undefined,
+    },
+  });
+}
 
 export const Route = createRootRoute({
   head: () => ({
@@ -24,10 +64,10 @@ export const Route = createRootRoute({
         name: 'viewport',
         content: 'width=device-width, initial-scale=1',
       },
+      // Ensure seo is called as a function if it's imported as such
       ...seo({
-        title:
-          'TanStack Start | Type-Safe, Client-First, Full-Stack React Framework',
-        description: `TanStack Start is a type-safe, client-first, full-stack React framework. `,
+        title: 'Transperth Multi-Stop Live Viewer', // Updated title
+        description: `View live bus times for multiple Transperth stops.`, // Updated description
       }),
     ],
     links: [
@@ -73,11 +113,12 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const queryClient = new QueryClient();
-
+  // Pass the globally defined queryClient instance to QueryClientProvider
   return (
     <html>
       <QueryClientProvider client={queryClient}>
+        {' '}
+        {/* <<< --- THIS IS THE CRUCIAL CHANGE */}
         <head>
           <HeadContent />
         </head>

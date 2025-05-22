@@ -1,7 +1,7 @@
 // src/routes/__root.tsx or wherever your Home component is located
 import { createFileRoute } from '@tanstack/react-router';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query'; // Import useQueryClient
+import { useQuery, useQueryClient } from '@tanstack/react-query'; // useQueryClient is still useful for other purposes, though not strictly needed for this specific `enabled` check
 
 interface BusTimeItem {
   liveStatus: boolean;
@@ -44,14 +44,15 @@ const fetchStopSuggestions = async (
 ): Promise<StopSuggestion[]> => {
   // Prevent API call if query is too short (client-side check)
   if (!query || query.length < 3) {
-    // Increased minimum length to 3 for suggestions to match backend
     return [];
   }
   try {
+    console.log(
+      `[Client] Fetching stop suggestions for "${query}" from API...`
+    ); // Added console log
     const response = await fetch(`/api/busstop-info/${query}`);
     const data = await response.json();
     if (!response.ok) {
-      // Log the full error response from the API for better debugging
       console.error('API Error fetching stop suggestions:', data);
       throw new Error(data.error || 'Failed to fetch stop suggestions');
     }
@@ -71,20 +72,22 @@ function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  const queryClient = useQueryClient(); // Initialize queryClient
+  // queryClient can be used for manual cache interactions, not strictly needed for the enabled check here
+  // const queryClient = useQueryClient();
 
-  // Ensure suggestions are only fetched when debouncedInput meets the length criteria
   const {
     data: suggestions = [],
     isFetching,
     error,
+    // The `isInitialLoading` can be useful to differentiate first load vs. subsequent fetches
+    // isInitialLoading,
   } = useQuery<StopSuggestion[], Error>({
     queryKey: ['stopSuggestions', debouncedInput],
     queryFn: () => fetchStopSuggestions(debouncedInput),
-    enabled:
-      debouncedInput.length >= 3 &&
-      !queryClient.getQueryData(['stopSuggestions', debouncedInput]),
-    staleTime: Infinity,
+    enabled: debouncedInput.length >= 3, // Only enable if input is long enough
+    // staleTime: Infinity, // This is now handled globally in `main.tsx` persistence options
+    // cacheTime: Infinity, // This is now handled globally in `main.tsx` persistence options
+    retry: false,
   });
 
   const addStop = () => {
@@ -100,8 +103,6 @@ function Home() {
       setInputValue('');
       setShowSuggestions(false);
     } else if (trimmed && !stops.includes(trimmed)) {
-      // If no exact match among suggestions, add the input value directly
-      // This allows users to add a stop number even if it wasn't in suggestions
       setStops([...stops, trimmed]);
       setInputValue('');
       setShowSuggestions(false);
@@ -112,26 +113,16 @@ function Home() {
     setInputValue(s.number);
     setShowSuggestions(false);
     inputRef.current?.focus();
-    // Immediately invalidate the suggestion cache for this specific query
-    // if you want to force a refetch next time this exact input is typed.
-    // However, for this use case, keeping it stale is probably fine.
-    // queryClient.invalidateQueries({ queryKey: ['stopSuggestions', s.number] });
   };
 
   const handleBlur = () =>
     setTimeout(() => {
-      // Only hide suggestions if the focus is not moving to a suggestion item
       if (!suggestionsRef.current?.contains(document.activeElement))
         setShowSuggestions(false);
     }, 100);
 
-  // Use useMemo for the display suggestions to avoid re-calculating on every render
-  // unless inputValue or suggestions change.
   const displaySuggestions = useMemo(() => {
-    if (!inputValue || inputValue.length < 3) return []; // Only show suggestions for longer inputs
-    // Optionally, you can add client-side filtering here if you want to fine-tune
-    // what's displayed based on the raw inputValue even before debouncing.
-    // For now, we rely on the debounced input for the API call.
+    if (!inputValue || inputValue.length < 3) return [];
     return suggestions;
   }, [inputValue, suggestions]);
 
@@ -162,36 +153,31 @@ function Home() {
 
           {showSuggestions &&
             Array.isArray(displaySuggestions) &&
-            displaySuggestions.length > 0 && ( // Ensure array before checking length
+            displaySuggestions.length > 0 && (
               <div
                 ref={suggestionsRef}
                 className='absolute z-10 w-full top-full mt-2 bg-zinc-700 border border-zinc-600 rounded-lg shadow-lg max-h-60 overflow-y-auto'
               >
-                {displaySuggestions.map(
-                  (
-                    s: StopSuggestion // Explicitly type s
-                  ) => (
-                    <div
-                      key={s.id}
-                      onClick={() => handleSelect(s)}
-                      className='p-3 hover:bg-zinc-600 cursor-pointer border-b border-zinc-600'
-                    >
-                      <p className='text-white font-semibold'>{s.name}</p>
-                      <p className='text-zinc-400 text-sm'>
-                        Stop Number: {s.number}
-                      </p>
-                    </div>
-                  )
-                )}
+                {displaySuggestions.map((s: StopSuggestion) => (
+                  <div
+                    key={s.id}
+                    onClick={() => handleSelect(s)}
+                    className='p-3 hover:bg-zinc-600 cursor-pointer border-b border-zinc-600'
+                  >
+                    <p className='text-white font-semibold'>{s.name}</p>
+                    <p className='text-zinc-400 text-sm'>
+                      Stop Number: {s.number}
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
 
-          {isFetching &&
-            debouncedInput.length >= 3 && ( // Only show loading when actively fetching for relevant input
-              <p className='absolute mt-2 text-sm text-zinc-400'>
-                Loading suggestions...
-              </p>
-            )}
+          {isFetching && debouncedInput.length >= 3 && (
+            <p className='absolute mt-2 text-sm text-zinc-400'>
+              Loading suggestions...
+            </p>
+          )}
           {error && (
             <p className='absolute mt-2 p-3 text-sm bg-red-500/10 text-red-300 border border-red-500 rounded'>
               Error: {error.message}

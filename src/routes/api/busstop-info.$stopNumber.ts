@@ -3,8 +3,7 @@ import { json } from '@tanstack/react-start';
 import { createAPIFileRoute } from '@tanstack/react-start/api';
 import { db } from '~/db/db'; // Adjust this path to your Drizzle DB instance
 import { stops } from '~/db/schema/stops'; // Adjust this path to your Drizzle schema for stops
-// Import 'sql' for raw SQL snippets and 'lower' for string manipulation
-import { ilike, or, sql } from 'drizzle-orm';
+import { sql, or } from 'drizzle-orm'; // Ensure 'or' is imported for your where clause
 
 interface StopSuggestion {
   id: number;
@@ -12,9 +11,38 @@ interface StopSuggestion {
   number: string;
 }
 
+// Define your allowed origin(s) - IMPORTANT: Replace with your actual production domain!
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173', // For local development with default Vite port
+  'http://localhost:3000', // Common alternative for local development
+  'https://chaos-nav.unstablevault.dev/', // !! REPLACE THIS WITH YOUR ACTUAL PRODUCTION DOMAIN !!
+  // Add other subdomains or production origins as needed, e.g., 'https://www.your-production-domain.com'
+];
+
 export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
   GET: async ({ params, request }) => {
-    const { stopNumber } = params; // Access the dynamic segment from params
+    // 1. Origin/Referer Check for Security
+    const origin = request.headers.get('Origin');
+    const referer = request.headers.get('Referer');
+
+    console.log('[API Route] Request Origin:', origin);
+    console.log('[API Route] Request Referer:', referer);
+
+    // Check if the request comes from an allowed origin or referer (for same-origin navigations)
+    const isAllowed =
+      (origin && ALLOWED_ORIGINS.includes(origin)) ||
+      (referer &&
+        ALLOWED_ORIGINS.some((allowed) => referer.startsWith(allowed)));
+
+    if (!isAllowed) {
+      console.warn(
+        `[API Route] Unauthorized access attempt from Origin: "${origin}" / Referer: "${referer}"`
+      );
+      return json({ error: 'Unauthorized access' }, { status: 403 });
+    }
+
+    // Continue with the rest of your API logic if allowed
+    const { stopNumber } = params;
 
     console.log(
       '[API Route] Received GET request to /api/busstop-info/$stopNumber'
@@ -29,7 +57,6 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
       return json({ data: [] }, { status: 200 });
     }
 
-    // Convert the input search term to lowercase once
     const lowerCaseStopNumber = stopNumber.toLowerCase();
     const likeQuery = `%${lowerCaseStopNumber}%`;
     console.log(
@@ -47,13 +74,11 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
         .from(stops)
         .where(
           or(
-            // Use sql.lower() for the column and apply LIKE to the lowercase query
             sql`lower(${stops.name}) LIKE ${likeQuery}`,
             sql`lower(${stops.number}) LIKE ${likeQuery}`
-            // Removed ilike here, explicitly using lower() and LIKE
           )
         )
-        .limit(3); // Limit results for performance
+        .limit(10); // Limit results for performance
 
       console.log(
         `[API Route] DB query completed. Found ${results.length} matches for "${stopNumber}".`
@@ -61,12 +86,11 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
       console.log(
         '[API Route] DB query Results (first 3):',
         results.slice(0, 3)
-      ); // Log a subset if many results
+      );
 
-      return json({ data: results }); // Default status is 200
+      return json({ data: results });
     } catch (err: any) {
       console.error('[API Route] Error during DB query:', err);
-      // Detailed error logging for Drizzle/LibSQL
       if (
         err instanceof Error &&
         'code' in err &&
@@ -76,7 +100,6 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
           '[API Route] Libsql SQL Parse Error Details:',
           err.message
         );
-        // If there's a 'cause' property with more details
         if ('cause' in err && err.cause instanceof Error) {
           console.error(
             '[API Route] Libsql SQL Parse Error Cause:',
