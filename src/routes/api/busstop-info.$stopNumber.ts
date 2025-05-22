@@ -22,9 +22,9 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
     console.log('[API Route] Full URL:', request.url);
     console.log(`[API Route] Extracted stopNumber parameter: "${stopNumber}"`);
 
-    if (!stopNumber || stopNumber.length < 2) {
+    if (!stopNumber || stopNumber.length < 3) {
       console.warn(
-        `[API Route] stopNumber "${stopNumber}" is too short or empty (< 2 chars). Returning empty array.`
+        `[API Route] stopNumber "${stopNumber}" is too short or empty (< 3 chars). Returning empty array.`
       );
       return json({ data: [] }, { status: 200 });
     }
@@ -53,7 +53,7 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
             // Removed ilike here, explicitly using lower() and LIKE
           )
         )
-        .limit(10); // Limit results for performance
+        .limit(3); // Limit results for performance
 
       console.log(
         `[API Route] DB query completed. Found ${results.length} matches for "${stopNumber}".`

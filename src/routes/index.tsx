@@ -35,23 +35,9 @@ const fetchStopData = async (stopNumber: string): Promise<BusTimeItem[]> => {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Failed to fetch');
     return data.data;
-  } catch (error) {
+  } catch (error: any) {
     console.warn(`Error fetching stop ${stopNumber}`, error);
-    // Fallback data for demonstration/development
-    return [
-      {
-        liveStatus: true,
-        busNumber: '998',
-        timeUntilArrival: '5 min',
-        destination: 'Perth Busport',
-      },
-      {
-        liveStatus: false,
-        busNumber: '100',
-        timeUntilArrival: '12 min',
-        destination: 'Fremantle Station',
-      },
-    ];
+    throw new Error(error?.message || 'Failed to fetch stop data');
   }
 };
 
@@ -59,7 +45,7 @@ const fetchStopData = async (stopNumber: string): Promise<BusTimeItem[]> => {
 const fetchStopSuggestions = async (
   query: string
 ): Promise<StopSuggestion[]> => {
-  if (!query || query.length < 2) {
+  if (!query || query.length < 3) {
     // Return an empty array or handle as needed when query is too short
     return [];
   }

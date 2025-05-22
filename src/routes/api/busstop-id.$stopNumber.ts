@@ -1,86 +1,110 @@
-// src/routes/api/bustop-info.$stopNumber.ts
 import { json } from '@tanstack/react-start';
 import { createAPIFileRoute } from '@tanstack/react-start/api';
-import { db } from '~/db/db'; // Adjust this path to your Drizzle DB instance
-import { stops } from '~/db/schema/stops'; // Adjust this path to your Drizzle schema for stops
-import { ilike, or } from 'drizzle-orm';
-
-interface StopSuggestion {
-  id: number;
-  name: string;
-  number: string;
-}
+import * as cheerio from 'cheerio';
 
 export const APIRoute = createAPIFileRoute('/api/busstop-id/$stopNumber')({
-  GET: async ({ params, request }) => {
-    // Add 'request' to params to inspect URL
-    console.log(
-      '[API Route] Received GET request to /api/bustop-info/$stopNumber'
-    );
-    console.log('[API Route] Full URL:', request.url);
-
-    // Correctly destructure the dynamic segment from params
-    const { stopNumber } = params; // Access the dynamic segment here
-
-    console.log(`[API Route] Extracted stopNumber parameter: "${stopNumber}"`);
-
-    if (!stopNumber || stopNumber.length < 2) {
-      console.warn(
-        `[API Route] stopNumber "${stopNumber}" is too short or empty (< 2 chars). Returning empty array.`
-      );
-      return json({ data: [] }, { status: 200 });
-    }
-
-    // For Drizzle's `ilike`, we still need to wrap with '%'
-    const likestopNumber = `%${stopNumber}%`;
-    console.log(
-      `[API Route] Drizzle LIKE stopNumber string: "${likestopNumber}"`
-    );
-
+  GET: async ({ params }) => {
+    // Change from POST to GET, and use params
     try {
-      console.log('[API Route] Starting DB stopNumber...');
-      const results: StopSuggestion[] = await db
-        .select({
-          id: stops.id,
-          name: stops.name,
-          number: stops.number,
-        })
-        .from(stops)
-        .where(
-          or(
-            ilike(stops.name, likestopNumber),
-            ilike(stops.number, likestopNumber)
-          )
-        )
-        .limit(10); // Limit results for performance
+      const { stopNumber } = params; // Access the dynamic segment from params
 
-      console.log(
-        `[API Route] DB stopNumber completed. Found ${results.length} matches for "${stopNumber}".`
-      );
-      console.log(
-        '[API Route] DB stopNumber Results (first 3):',
-        results.slice(0, 3)
-      ); // Log a subset if many results
+      if (!stopNumber) {
+        return json({ error: 'Missing stop number' }, { status: 400 });
+      }
 
-      return json({ data: results }); // Default status is 200
-    } catch (err: any) {
-      console.error('[API Route] Error during DB stopNumber:', err);
-      // Log more specific error details if available
-      if (err.sqlMessage || err.originalError) {
-        // Common for database errors
-        console.error(
-          '[API Route] Database error details:',
-          err.sqlMessage || err.originalError
+      const url = `https://136213.mobi/RealTime/RealTimeStopResults.aspx?SN=${stopNumber}`;
+      console.log('Scraping:', url);
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch page: ${response.statusText}`);
+      }
+      const rawHtml = await response.text();
+
+      const $ = cheerio.load(rawHtml);
+      const timetableElement = $('#pnlStopTimetable');
+
+      if (timetableElement.length === 0) {
+        // If the element isn't found, it might indicate that Playwright was actually needed
+        // or the page structure has changed, or it's a temporary issue.
+        // It's good to log this for debugging.
+        console.warn(
+          `#pnlStopTimetable not found for stop number: ${stopNumber}.`
+        );
+        return json(
+          { error: 'Failed to find timetable data on the page.' },
+          { status: 500 }
         );
       }
+
+      const parsedData = parseTimetableHtml(timetableElement.html() || '');
+
+      return json({ data: parsedData });
+    } catch (err: any) {
+      console.error('Scrape error:', err.message || err);
       return json(
-        {
-          error:
-            'Failed to fetch stop suggestions due to server error.' +
-            (err.message || ''),
-        },
+        { error: 'Failed to scrape page or extract data: ' + err.message },
         { status: 500 }
       );
     }
   },
 });
+
+function parseTimetableHtml(html: string) {
+  const $ = cheerio.load(html);
+  const rows: {
+    liveStatus: boolean;
+    busNumber: string;
+    timeUntilArrival: string;
+    destination: string; // Added new field for destination
+  }[] = [];
+
+  $('.tpm_row_timetable').each((_, el) => {
+    const row = $(el);
+
+    const liveStatus =
+      row.find('.tt-livetext').text().trim().toUpperCase() === 'LIVE';
+
+    // Bus number is in a span inside the first child div of .tpm_row_timetable
+    const busNumber = row.children('div').eq(0).find('span').text().trim();
+
+    // Time until arrival is in a strong tag inside the third child div of .tpm_row_timetable
+    const timeUntilArrival = row
+      .children('div')
+      .eq(2)
+      .find('strong')
+      .text()
+      .trim();
+
+    // --- NEW: Destination extraction ---
+    // The destination is in a div with class 'route-display-name' inside the second child div
+    const destination = row
+      .children('div')
+      .eq(1)
+      .find('.route-display-name')
+      .first()
+      .text()
+      .trim();
+    // Use .first() to ensure you get the first one if there are multiple divs with this class,
+    // though in your example, there's only one relevant one.
+    // --- END NEW ---
+
+    // Basic validation for timeUntilArrival (optional, but good for robustness)
+    if (!timeUntilArrival) {
+      console.warn('Could not extract timeUntilArrival for a row.');
+    }
+    // Basic validation for destination (optional)
+    if (!destination) {
+      console.warn('Could not extract destination for a row.');
+    }
+
+    rows.push({
+      liveStatus,
+      busNumber,
+      timeUntilArrival,
+      destination, // Include destination in the pushed object
+    });
+  });
+
+  return rows;
+}
