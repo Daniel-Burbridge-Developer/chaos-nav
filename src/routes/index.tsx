@@ -7,7 +7,7 @@ export const Route = createFileRoute('/')({
 });
 
 const fetchStopData = async (stopNumber: string) => {
-  const response = await fetch('/api/bus-stop-by-id', {
+  const response = await fetch('/api/scrape', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ stopNumber }),

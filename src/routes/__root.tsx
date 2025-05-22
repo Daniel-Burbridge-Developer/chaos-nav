@@ -11,6 +11,7 @@ import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary';
 import { NotFound } from '~/components/NotFound';
 import appCss from '~/styles/app.css?url';
 import { seo } from '~/utils/seo';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export const Route = createRootRoute({
   head: () => ({
@@ -71,16 +72,20 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const queryClient = new QueryClient();
+
   return (
     <html>
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <TanStackRouterDevtools position='bottom-right' />
-        <Scripts />
-      </body>
+      <QueryClientProvider client={queryClient}>
+        <head>
+          <HeadContent />
+        </head>
+        <body>
+          {children}
+          <TanStackRouterDevtools position='bottom-right' />
+          <Scripts />
+        </body>
+      </QueryClientProvider>
     </html>
   );
 }
