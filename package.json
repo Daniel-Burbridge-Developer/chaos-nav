@@ -13,6 +13,7 @@
     "@tanstack/react-router": "^1.120.5",
     "@tanstack/react-router-devtools": "^1.120.6",
     "@tanstack/react-start": "^1.120.5",
+    "@vercel/analytics": "^1.5.0",
     "cheerio": "^1.0.0",
     "playwright": "^1.52.0",
     "react": "^19.1.0",

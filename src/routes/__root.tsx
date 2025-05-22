@@ -12,6 +12,7 @@ import { NotFound } from '~/components/NotFound';
 import appCss from '~/styles/app.css?url';
 import { seo } from '~/utils/seo';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Analytics } from '@vercel/analytics/react';
 
 export const Route = createRootRoute({
   head: () => ({
@@ -83,6 +84,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <body>
           {children}
           <TanStackRouterDevtools position='bottom-right' />
+          <Analytics />
           <Scripts />
         </body>
       </QueryClientProvider>
