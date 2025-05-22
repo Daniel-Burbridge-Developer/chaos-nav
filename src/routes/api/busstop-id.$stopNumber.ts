@@ -56,6 +56,7 @@ function parseTimetableHtml(html: string) {
     liveStatus: boolean;
     busNumber: string;
     timeUntilArrival: string;
+    destination: string; // Added new field for destination
   }[] = [];
 
   $('.tpm_row_timetable').each((_, el) => {
@@ -64,19 +65,44 @@ function parseTimetableHtml(html: string) {
     const liveStatus =
       row.find('.tt-livetext').text().trim().toUpperCase() === 'LIVE';
 
-    const busNumber = row.find('span').first().text().trim();
+    // Bus number is in a span inside the first child div of .tpm_row_timetable
+    const busNumber = row.children('div').eq(0).find('span').text().trim();
 
+    // Time until arrival is in a strong tag inside the third child div of .tpm_row_timetable
     const timeUntilArrival = row
-      .find('div')
-      .filter((_, divEl) => $(divEl).text().includes('MIN'))
+      .children('div')
+      .eq(2)
+      .find('strong')
+      .text()
+      .trim();
+
+    // --- NEW: Destination extraction ---
+    // The destination is in a div with class 'route-display-name' inside the second child div
+    const destination = row
+      .children('div')
+      .eq(1)
+      .find('.route-display-name')
       .first()
       .text()
       .trim();
+    // Use .first() to ensure you get the first one if there are multiple divs with this class,
+    // though in your example, there's only one relevant one.
+    // --- END NEW ---
+
+    // Basic validation for timeUntilArrival (optional, but good for robustness)
+    if (!timeUntilArrival) {
+      console.warn('Could not extract timeUntilArrival for a row.');
+    }
+    // Basic validation for destination (optional)
+    if (!destination) {
+      console.warn('Could not extract destination for a row.');
+    }
 
     rows.push({
       liveStatus,
       busNumber,
       timeUntilArrival,
+      destination, // Include destination in the pushed object
     });
   });
 

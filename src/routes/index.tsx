@@ -2,11 +2,20 @@ import { createFileRoute } from '@tanstack/react-router';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
+// --- NEW: Define the type for a single bus item ---
+interface BusTimeItem {
+  liveStatus: boolean;
+  busNumber: string;
+  timeUntilArrival: string;
+  destination: string; // Added destination
+}
+
 export const Route = createFileRoute('/')({
   component: Home,
 });
 
-const fetchStopData = async (stopNumber: string) => {
+const fetchStopData = async (stopNumber: string): Promise<BusTimeItem[]> => {
+  // Updated return type
   const response = await fetch(`/api/busstop-id/${stopNumber}`);
 
   const data = await response.json();
@@ -82,7 +91,8 @@ function StopCard({
   stopNumber: string;
   onRemove: (stop: string) => void;
 }) {
-  const { data, error, isFetching } = useQuery({
+  const { data, error, isFetching } = useQuery<BusTimeItem[], Error>({
+    // Updated generic types
     queryKey: ['stopData', stopNumber],
     queryFn: () => fetchStopData(stopNumber),
     enabled: !!stopNumber,
@@ -93,7 +103,35 @@ function StopCard({
   return (
     <div className='bg-zinc-800 rounded-2xl p-6 border border-zinc-700 shadow-lg relative'>
       <div className='flex justify-between items-center mb-4'>
-        <h2 className='text-2xl font-bold text-white'>🅿️ Stop {stopNumber}</h2>
+        <h2 className='text-2xl font-bold text-white flex items-center gap-2'>
+          Stop {stopNumber}
+          {isFetching && (
+            <span className='animate-spin text-blue-400 ml-2'>
+              {/* Lucide Loader icon (or fallback SVG) */}
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                className='w-5 h-5'
+                fill='none'
+                viewBox='0 0 24 24'
+                stroke='currentColor'
+              >
+                <circle
+                  className='opacity-25'
+                  cx='12'
+                  cy='12'
+                  r='10'
+                  stroke='currentColor'
+                  strokeWidth='4'
+                />
+                <path
+                  className='opacity-75'
+                  fill='currentColor'
+                  d='M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z'
+                />
+              </svg>
+            </span>
+          )}
+        </h2>
         <button
           onClick={() => onRemove(stopNumber)}
           className='text-red-400 hover:text-red-300 text-sm'
@@ -101,12 +139,6 @@ function StopCard({
           ✖ Remove
         </button>
       </div>
-
-      {isFetching && (
-        <p className='text-blue-400 text-sm mb-3 animate-pulse'>
-          Refreshing data...
-        </p>
-      )}
 
       {error && (
         <p className='bg-red-500/10 border border-red-500 text-red-300 p-3 rounded text-sm'>
@@ -145,6 +177,13 @@ function StopCard({
                     </div>
                   </div>
                 </div>
+                {/* --- NEW: Display destination --- */}
+                {item.destination && (
+                  <div className='text-zinc-300 text-sm mt-1'>
+                    {item.destination}
+                  </div>
+                )}
+                {/* --- END NEW --- */}
               </div>
             );
           })}
