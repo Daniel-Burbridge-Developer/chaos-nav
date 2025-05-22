@@ -1,0 +1,1 @@
+CREATE INDEX `name_idx` ON `stops` (`name`);

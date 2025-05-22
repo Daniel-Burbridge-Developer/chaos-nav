@@ -1,9 +1,9 @@
 // src/routes/api/bustop-info.$stopNumber.ts
 import { json } from '@tanstack/react-start';
 import { createAPIFileRoute } from '@tanstack/react-start/api';
-import { db } from '~/db/db'; // Adjust this path to your Drizzle DB instance
-import { stops } from '~/db/schema/stops'; // Adjust this path to your Drizzle schema for stops
-import { sql, or } from 'drizzle-orm'; // Ensure 'or' is imported for your where clause
+import { db } from '~/db/db';
+import { stops } from '~/db/schema/stops';
+import { sql, or } from 'drizzle-orm';
 
 interface StopSuggestion {
   id: number;
@@ -11,24 +11,25 @@ interface StopSuggestion {
   number: string;
 }
 
-// Define your allowed origin(s) - IMPORTANT: Replace with your actual production domain!
 const ALLOWED_ORIGINS = [
-  'http://localhost:5173', // For local development with default Vite port
-  'http://localhost:3000', // Common alternative for local development
-  'https://chaos-nav.unstablevault.dev/', // !! REPLACE THIS WITH YOUR ACTUAL PRODUCTION DOMAIN !!
-  // Add other subdomains or production origins as needed, e.g., 'https://www.your-production-domain.com'
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://chaos-nav.unstablevault.dev/',
 ];
+
+// In-memory cache for stop suggestions
+const suggestionCache = new Map<
+  string,
+  { data: StopSuggestion[]; timestamp: number }
+>();
+
+const CACHE_TTL_MS = 300 * 60 * 1000; // 300 minutes cache TTL
 
 export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
   GET: async ({ params, request }) => {
-    // 1. Origin/Referer Check for Security
     const origin = request.headers.get('Origin');
     const referer = request.headers.get('Referer');
 
-    console.log('[API Route] Request Origin:', origin);
-    console.log('[API Route] Request Referer:', referer);
-
-    // Check if the request comes from an allowed origin or referer (for same-origin navigations)
     const isAllowed =
       (origin && ALLOWED_ORIGINS.includes(origin)) ||
       (referer &&
@@ -36,19 +37,12 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
 
     if (!isAllowed) {
       console.warn(
-        `[API Route] Unauthorized access attempt from Origin: "${origin}" / Referer: "${referer}"`
+        `[API Route] Unauthorized access attempt from Origin: "<span class="math-inline">\{origin\}" / Referer\: "</span>{referer}"`
       );
       return json({ error: 'Unauthorized access' }, { status: 403 });
     }
 
-    // Continue with the rest of your API logic if allowed
     const { stopNumber } = params;
-
-    console.log(
-      '[API Route] Received GET request to /api/busstop-info/$stopNumber'
-    );
-    console.log('[API Route] Full URL:', request.url);
-    console.log(`[API Route] Extracted stopNumber parameter: "${stopNumber}"`);
 
     if (!stopNumber || stopNumber.length < 3) {
       console.warn(
@@ -58,7 +52,18 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
     }
 
     const lowerCaseStopNumber = stopNumber.toLowerCase();
-    const likeQuery = `%${lowerCaseStopNumber}%`;
+    const cacheKey = lowerCaseStopNumber; // Use the lowercase query as the cache key
+
+    // Check cache first
+    const cachedEntry = suggestionCache.get(cacheKey);
+    if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL_MS) {
+      console.log(`[API Route] Serving from cache for "${cacheKey}".`);
+      return json({ data: cachedEntry.data });
+    }
+
+    // If not in cache or expired, fetch from DB
+    console.log(`[API Route] Fetching from DB for "${cacheKey}".`);
+    const likeQuery = `${lowerCaseStopNumber}%`; // No leading '%'
     console.log(
       `[API Route] Drizzle LIKE query string (lowercase): "${likeQuery}"`
     );
@@ -74,45 +79,21 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
         .from(stops)
         .where(
           or(
-            sql`lower(${stops.name}) LIKE ${likeQuery}`,
-            sql`lower(${stops.number}) LIKE ${likeQuery}`
+            sql`lower(${stops.name}) LIKE ${likeQuery}`, // Will now use index efficiently
+            sql`lower(${stops.number}) LIKE ${likeQuery}` // Will now use index efficiently
           )
         )
-        .limit(10); // Limit results for performance
+        .limit(3); // Limit results for performance
+
+      // Store in cache
+      suggestionCache.set(cacheKey, { data: results, timestamp: Date.now() });
 
       console.log(
-        `[API Route] DB query completed. Found ${results.length} matches for "${stopNumber}".`
+        `[API Route] DB query completed. Found <span class="math-inline">\{results\.length\} matches for "</span>{stopNumber}".`
       );
-      console.log(
-        '[API Route] DB query Results (first 3):',
-        results.slice(0, 3)
-      );
-
       return json({ data: results });
     } catch (err: any) {
       console.error('[API Route] Error during DB query:', err);
-      if (
-        err instanceof Error &&
-        'code' in err &&
-        err.code === 'SQL_PARSE_ERROR'
-      ) {
-        console.error(
-          '[API Route] Libsql SQL Parse Error Details:',
-          err.message
-        );
-        if ('cause' in err && err.cause instanceof Error) {
-          console.error(
-            '[API Route] Libsql SQL Parse Error Cause:',
-            err.cause.message
-          );
-        }
-      } else {
-        console.error(
-          '[API Route] General Error Details:',
-          err.message || JSON.stringify(err)
-        );
-      }
-
       return json(
         {
           error:

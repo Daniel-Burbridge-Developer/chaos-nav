@@ -7,5 +7,10 @@ export const stops = sqliteTable(
     name: text('name').notNull(),
     number: text('number').notNull(),
   },
-  (stops) => [index('number_idx').on(stops.number)]
+  (stops) => [
+    // Existing index on number
+    index('number_idx').on(stops.number),
+    // Add a new index on name
+    index('name_idx').on(stops.name),
+  ]
 );
