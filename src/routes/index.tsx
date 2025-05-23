@@ -148,7 +148,7 @@ function Home() {
                   onClick={() => {
                     handleSelect(s);
                     addStop();
-                    setShowSuggestions(true);
+                    setShowSuggestions(false);
                   }}
                   className='p-3 hover:bg-zinc-600 cursor-pointer border-b border-zinc-600'
                 >
