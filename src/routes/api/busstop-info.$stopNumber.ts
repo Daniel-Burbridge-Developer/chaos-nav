@@ -1,9 +1,9 @@
 // src/routes/api/bustop-info.$stopNumber.ts
-import { json } from '@tanstack/react-start';
-import { createAPIFileRoute } from '@tanstack/react-start/api';
-import { db } from '~/db/db';
-import { stops } from '~/db/schema/stops';
-import { sql, or } from 'drizzle-orm';
+import { json } from "@tanstack/react-start";
+import { createAPIFileRoute } from "@tanstack/react-start/api";
+import { db } from "~/db/db";
+import { stops } from "~/db/schema/stops";
+import { sql, or } from "drizzle-orm";
 
 interface StopSuggestion {
   id: number;
@@ -12,9 +12,9 @@ interface StopSuggestion {
 }
 
 const ALLOWED_ORIGINS = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://chaos-nav.unstablevault.dev/',
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://chaos-nav.unstablevault.dev/",
 ];
 
 // In-memory cache for stop suggestions
@@ -25,10 +25,10 @@ const suggestionCache = new Map<
 
 const CACHE_TTL_MS = 300 * 60 * 1000; // 300 minutes cache TTL
 
-export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
+export const APIRoute = createAPIFileRoute("/api/busstop-info/$stopNumber")({
   GET: async ({ params, request }) => {
-    const origin = request.headers.get('Origin');
-    const referer = request.headers.get('Referer');
+    const origin = request.headers.get("Origin");
+    const referer = request.headers.get("Referer");
 
     const isAllowed =
       (origin && ALLOWED_ORIGINS.includes(origin)) ||
@@ -39,7 +39,7 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
       console.warn(
         `[API Route] Unauthorized access attempt from Origin: "<span class="math-inline">\{origin\}" / Referer\: "</span>{referer}"`
       );
-      return json({ error: 'Unauthorized access' }, { status: 403 });
+      return json({ error: "Unauthorized access" }, { status: 403 });
     }
 
     const { stopNumber } = params;
@@ -69,7 +69,7 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
     );
 
     try {
-      console.log('[API Route] Starting DB query...');
+      console.log("[API Route] Starting DB query...");
       const results: StopSuggestion[] = await db
         .select({
           id: stops.id,
@@ -93,12 +93,12 @@ export const APIRoute = createAPIFileRoute('/api/busstop-info/$stopNumber')({
       );
       return json({ data: results });
     } catch (err: any) {
-      console.error('[API Route] Error during DB query:', err);
+      console.error("[API Route] Error during DB query:", err);
       return json(
         {
           error:
-            'Failed to fetch stop suggestions due to server error: ' +
-            (err.message || 'Unknown DB Error'),
+            "Failed to fetch stop suggestions due to server error: " +
+            (err.message || "Unknown DB Error"),
         },
         { status: 500 }
       );
