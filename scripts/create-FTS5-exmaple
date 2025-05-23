@@ -5,3 +5,7 @@ USING fts5(
   content='stops',
   content_rowid='rowid'
 );
+
+INSERT INTO stops_fts(stops_fts) VALUES('rebuild');
+
+(make sure to search with MATCH and a wildcard at the end)

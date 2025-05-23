@@ -1,11 +1,9 @@
 // src/routes/api/bustop-info.$stopNumber.ts
-import { json } from "@tanstack/react-start";
-import { createAPIFileRoute } from "@tanstack/react-start/api";
-import { db } from "~/db/db";
-import { stops } from "~/db/schema/stops"; // Assuming your original stops table definition
-// Import the FTS5 table definition (adjust the path as needed)
-// import { stopsFts } from '~/db/schema/stops_fts';
-import { sql } from "drizzle-orm";
+import { json } from '@tanstack/react-start';
+import { createAPIFileRoute } from '@tanstack/react-start/api';
+import { db } from '~/db/db';
+import { stops } from '~/db/schema/stops';
+import { sql } from 'drizzle-orm';
 
 interface StopSuggestion {
   id: number;
@@ -14,9 +12,9 @@ interface StopSuggestion {
 }
 
 const ALLOWED_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://chaos-nav.unstablevault.dev/",
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://chaos-nav.unstablevault.dev/',
 ];
 
 // In-memory cache for stop suggestions
@@ -27,11 +25,11 @@ const suggestionCache = new Map<
 
 const CACHE_TTL_MS = 300 * 60 * 1000; // 300 minutes cache TTL
 
-export const APIRoute = createAPIFileRoute("/api/busstop-infoFts5/$stopNumber")(
+export const APIRoute = createAPIFileRoute('/api/busstop-infoFts5/$stopNumber')(
   {
     GET: async ({ params, request }) => {
-      const origin = request.headers.get("Origin");
-      const referer = request.headers.get("Referer");
+      const origin = request.headers.get('Origin');
+      const referer = request.headers.get('Referer');
 
       const isAllowed =
         (origin && ALLOWED_ORIGINS.includes(origin)) ||
@@ -42,7 +40,7 @@ export const APIRoute = createAPIFileRoute("/api/busstop-infoFts5/$stopNumber")(
         console.warn(
           `[API Route] Unauthorized access attempt from Origin: "${origin}" / Referer: "${referer}"`
         );
-        return json({ error: "Unauthorized access" }, { status: 403 });
+        return json({ error: 'Unauthorized access' }, { status: 403 });
       }
 
       const { stopNumber } = params;
@@ -66,24 +64,22 @@ export const APIRoute = createAPIFileRoute("/api/busstop-infoFts5/$stopNumber")(
 
       // If not in cache or expired, fetch from DB using FTS5
       console.log(`[API Route] Fetching from DB (FTS5) for "${cacheKey}".`);
-      const fts5Query = lowerCaseStopNumber; // The search term for FTS5 MATCH
+      // *** CHANGE HERE: Add the wildcard to the fts5Query ***
+      const fts5Query = `${lowerCaseStopNumber}*`; // This will match any token that *starts with* the query
 
       try {
-        console.log("[API Route] Starting FTS5 DB query...");
-        // Important: Adapt this query to your FTS5 table structure.
-        // We are joining with the original 'stops' table to get all the details.
+        console.log('[API Route] Starting FTS5 DB query...');
         const results = await db.all(sql`
-        SELECT
-          s.id,
-          s.name,
-          s.number
-        FROM stops_fts f
-        JOIN stops s ON f.rowid = s.id -- Assuming rowid in FTS matches stops.id
-        WHERE stops_fts MATCH ${fts5Query}
-        LIMIT 3;
-      `);
+          SELECT
+            s.id,
+            s.name,
+            s.number
+          FROM stops_fts f
+          JOIN stops s ON f.rowid = s.id -- Assuming rowid in FTS matches stops.id
+          WHERE stops_fts MATCH ${fts5Query}
+          LIMIT 3;
+        `);
 
-        // The 'db.all' returns an array of rows, so we map over results directly.
         const mappedResults = results.map((row: any) => ({
           id: Number(row.id),
           name: String(row.name),
@@ -101,12 +97,12 @@ export const APIRoute = createAPIFileRoute("/api/busstop-infoFts5/$stopNumber")(
         );
         return json({ data: mappedResults });
       } catch (err: any) {
-        console.error("[API Route] Error during FTS5 DB query:", err);
+        console.error('[API Route] Error during FTS5 DB query:', err);
         return json(
           {
             error:
-              "Failed to fetch stop suggestions due to server error (FTS5): " +
-              (err.message || "Unknown DB Error"),
+              'Failed to fetch stop suggestions due to server error (FTS5): ' +
+              (err.message || 'Unknown DB Error'),
           },
           { status: 500 }
         );
