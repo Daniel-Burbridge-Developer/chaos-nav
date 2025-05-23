@@ -145,7 +145,11 @@ function Home() {
               {suggestions.map((s) => (
                 <div
                   key={s.id}
-                  onClick={() => handleSelect(s)}
+                  onClick={() => {
+                    handleSelect(s);
+                    addStop();
+                    setShowSuggestions(true);
+                  }}
                   className='p-3 hover:bg-zinc-600 cursor-pointer border-b border-zinc-600'
                 >
                   <p className='text-white font-semibold'>{s.name}</p>
