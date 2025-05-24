@@ -1,7 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router';
-import StopLookup from './-components/stop-lookup';
+import { createFileRoute } from "@tanstack/react-router";
+import StopLookup from "./-components/stop-lookup";
 
-export const Route = createFileRoute('/stops/')({
+export const Route = createFileRoute("/stops/")({
   component: RouteComponent,
 });
 
