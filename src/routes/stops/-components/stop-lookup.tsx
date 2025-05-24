@@ -4,6 +4,7 @@ import { z } from "zod";
 import useDebounce from "~/hooks/useDebounce";
 import { useEffect, useState } from "react";
 import { Stop } from "~/db/schema/stops";
+import { useQuery } from "@tanstack/react-query";
 
 const stopLookupSchema = z.object({
   stop: z.string().length(5, "Stop number must be exactly 5 characters long"),
@@ -26,39 +27,27 @@ const resolveStopLookup = async (
   }
 };
 
-const StopLookup = () => {
-  const [suggestions, setSuggestions] = useState<Stop[]>([]);
-  const [inputValue, setInputValue] = useState("");
+const fetchSuggestions = async (debouncedInput: string) => {
+  const response = await fetch(`/api/busstop-infoFts5/${debouncedInput}`);
+  if (!response.ok) throw new Error("Failed to fetch suggestions");
+  const { data } = await response.json();
+  return data || [];
+};
 
+const StopLookup = () => {
+  const [inputValue, setInputValue] = useState("");
   const debouncedInput = useDebounce(inputValue, 300);
 
-  useEffect(() => {
-    if (debouncedInput.length < 3) {
-      setSuggestions([]);
-      return;
-    }
-
-    // Fetch suggestions from the API and update state
-    const fetchSuggestions = async () => {
-      try {
-        const response = await fetch(`/api/busstop-infoFts5/${debouncedInput}`);
-        const { data } = await response.json();
-        if (!response.ok) {
-          setSuggestions([]);
-          return;
-        }
-        setSuggestions(data || []);
-        suggestions.length > 0
-          ? console.log("Suggestions fetched successfully:", suggestions)
-          : console.log("No suggestions found for input:", debouncedInput);
-      } catch (error) {
-        setSuggestions([]);
-      }
-    };
-
-    fetchSuggestions();
-    return;
-  }, [debouncedInput]);
+  const {
+    data: suggestions = [],
+    isFetching,
+    isError,
+  } = useQuery({
+    queryKey: ["busstop-suggestions", debouncedInput],
+    queryFn: () => fetchSuggestions(debouncedInput),
+    enabled: debouncedInput.length >= 3,
+    staleTime: 1000 * 60, // 1 minute, adjust as needed
+  });
 
   const form = useForm({
     validators: {
