@@ -8,6 +8,8 @@ const stopLookupSchema = z.object({
   stop: z.string().length(5, 'Stop number must be exactly 5 characters long'),
 });
 
+// ADD FUNCTIONALITY TO RESOLVE BUS STOP LOOKUP
+
 const resolveStopLookup = async (
   stopNumber: string
 ): Promise<{ error?: string; data?: any }> => {
@@ -23,18 +25,7 @@ const resolveStopLookup = async (
   }
 };
 
-const mockSuggestions = [
-  { id: 1, name: 'Main St & 1st Ave', number: '12345' },
-  { id: 2, name: 'Broadway & 2nd St', number: '67890' },
-  { id: 3, name: 'Elm St & 3rd Ave', number: '54321' },
-];
-
 const StopLookup = () => {
-  const [suggestions, setSuggestions] = useState<typeof mockSuggestions>([]);
-  const [inputValue, setInputValue] = useState('');
-
-  const debouncedInput = useDebounce(inputValue, 300);
-
   const form = useForm({
     validators: {
       onSubmit: stopLookupSchema,
@@ -53,19 +44,38 @@ const StopLookup = () => {
     },
   });
 
-  useEffect(() => {
-    if (debouncedInput.length < 3) {
-      setSuggestions([]);
+  const handleSuggestions = (user_input: string) => {
+    const mockSuggestions = [
+      { id: 1, name: 'Main St & 1st Ave', number: '12345' },
+      { id: 2, name: 'Broadway & 2nd St', number: '67890' },
+      { id: 3, name: 'Elm St & 3rd Ave', number: '54321' },
+    ];
+
+    if (user_input.length < 3) {
       return;
     }
-    // Simulate fetching suggestions
-    const filtered = mockSuggestions.filter(
+
+    // Debounce the input to avoid too many API calls
+    const debouncedInput = useDebounce(user_input, 300);
+
+    console.log('Fetching suggestions for:', debouncedInput);
+
+    const suggestions = mockSuggestions.filter(
       (suggestion) =>
         suggestion.name.toLowerCase().includes(debouncedInput.toLowerCase()) ||
         suggestion.number.includes(debouncedInput)
     );
-    setSuggestions(filtered);
-  }, [debouncedInput]);
+
+    setTimeout(() => {
+      console.log(
+        'Suggestions after 1 second - Pretending to fetch for real:',
+        suggestions
+      );
+    }, 1000);
+
+    // Here you would typically update the UI with the suggestions
+    console.log('Suggestions:', suggestions);
+  };
 
   return (
     <form
@@ -81,11 +91,11 @@ const StopLookup = () => {
               type='text'
               name={field.name}
               placeholder='Enter stop number or name'
-              value={inputValue}
+              value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => {
                 field.setValue(e.target.value);
-                setInputValue(e.target.value);
+                handleSuggestions(e.target.value);
               }}
               autoFocus
             />
@@ -95,19 +105,6 @@ const StopLookup = () => {
                   .map((error) => error?.message)
                   .join(', ')}
               </em>
-            )}
-            {/* Suggestions UI */}
-            {suggestions.length > 0 && (
-              <ul className='bg-white text-black rounded shadow mt-2'>
-                {suggestions.map((s) => (
-                  <li
-                    key={s.id}
-                    className='p-2 hover:bg-gray-200 cursor-pointer'
-                  >
-                    {s.name} ({s.number})
-                  </li>
-                ))}
-              </ul>
             )}
           </div>
         )}
