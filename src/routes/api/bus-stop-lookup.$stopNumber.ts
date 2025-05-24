@@ -2,7 +2,7 @@ import { json } from '@tanstack/react-start';
 import { createAPIFileRoute } from '@tanstack/react-start/api';
 import * as cheerio from 'cheerio';
 
-export const APIRoute = createAPIFileRoute('/api/busstop-id/$stopNumber')({
+export const APIRoute = createAPIFileRoute('/api/bus-stop-lookup/$stopNumber')({
   GET: async ({ params }) => {
     // Change from POST to GET, and use params
     try {
