@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { InteractiveMap } from './-components/map';
 
 export const Route = createFileRoute('/bus-routes/')({
+  ssr: false,
   component: RouteComponent,
 });
 
