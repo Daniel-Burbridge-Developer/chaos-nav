@@ -3,7 +3,7 @@ import { json } from "@tanstack/react-start";
 import { createAPIFileRoute } from "@tanstack/react-start/api";
 import { db } from "~/db/db";
 import { stops } from "~/db/schema/stops";
-import { sql, or } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 interface StopSuggestion {
   id: number;
@@ -37,7 +37,7 @@ export const APIRoute = createAPIFileRoute("/api/busstop-info/$stopNumber")({
 
     if (!isAllowed) {
       console.warn(
-        `[API Route] Unauthorized access attempt from Origin: "<span class="math-inline">\{origin\}" / Referer\: "</span>{referer}"`
+        `[API Route] Unauthorized access attempt from Origin: "${origin}" / Referer: "${referer}"`
       );
       return json({ error: "Unauthorized access" }, { status: 403 });
     }
@@ -61,43 +61,46 @@ export const APIRoute = createAPIFileRoute("/api/busstop-info/$stopNumber")({
       return json({ data: cachedEntry.data });
     }
 
-    // If not in cache or expired, fetch from DB
-    console.log(`[API Route] Fetching from DB for "${cacheKey}".`);
-    const likeQuery = `${lowerCaseStopNumber}%`; // No leading '%'
-    console.log(
-      `[API Route] Drizzle LIKE query string (lowercase): "${likeQuery}"`
-    );
+    // If not in cache or expired, fetch from DB using FTS5
+    console.log(`[API Route] Fetching from DB (FTS5) for "${cacheKey}".`);
+    // *** CHANGE HERE: Add the wildcard to the fts5Query ***
+    const fts5Query = `${lowerCaseStopNumber}*`; // This will match any token that *starts with* the query
 
     try {
-      console.log("[API Route] Starting DB query...");
-      const results: StopSuggestion[] = await db
-        .select({
-          id: stops.id,
-          name: stops.name,
-          number: stops.number,
-        })
-        .from(stops)
-        .where(
-          or(
-            sql`lower(${stops.name}) LIKE ${likeQuery}`, // Will now use index efficiently
-            sql`lower(${stops.number}) LIKE ${likeQuery}` // Will now use index efficiently
-          )
-        )
-        .limit(3); // Limit results for performance
+      console.log("[API Route] Starting FTS5 DB query...");
+      const results = await db.all(sql`
+          SELECT
+            s.id,
+            s.name,
+            s.number
+          FROM stops_fts f
+          JOIN stops s ON f.rowid = s.id -- Assuming rowid in FTS matches stops.id
+          WHERE stops_fts MATCH ${fts5Query}
+          LIMIT 3;
+        `);
+
+      const mappedResults = results.map((row: any) => ({
+        id: Number(row.id),
+        name: String(row.name),
+        number: String(row.number),
+      }));
 
       // Store in cache
-      suggestionCache.set(cacheKey, { data: results, timestamp: Date.now() });
+      suggestionCache.set(cacheKey, {
+        data: mappedResults,
+        timestamp: Date.now(),
+      });
 
       console.log(
-        `[API Route] DB query completed. Found <span class="math-inline">\{results\.length\} matches for "</span>{stopNumber}".`
+        `[API Route] FTS5 DB query completed. Found ${mappedResults.length} matches for "${stopNumber}".`
       );
-      return json({ data: results });
+      return json({ data: mappedResults });
     } catch (err: any) {
-      console.error("[API Route] Error during DB query:", err);
+      console.error("[API Route] Error during FTS5 DB query:", err);
       return json(
         {
           error:
-            "Failed to fetch stop suggestions due to server error: " +
+            "Failed to fetch stop suggestions due to server error (FTS5): " +
             (err.message || "Unknown DB Error"),
         },
         { status: 500 }
