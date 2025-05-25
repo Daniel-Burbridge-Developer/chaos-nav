@@ -9,15 +9,14 @@ import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import * as React from 'react';
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary';
 import { NotFound } from '~/components/NotFound';
-// import appCss from '~/styles/app.css?url';
-import '~/styles/app.css';
+import appCss from '~/styles/app.css?url';
 import { seo } from '~/utils/seo';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Analytics } from '@vercel/analytics/react';
 import { Toaster } from '@/components/ui/sonner';
 import TopNav from './-components/topnav';
 
-import 'leaflet/dist/leaflet.css';
+import leafletCss from 'leaflet/dist/leaflet.css?url';
 
 export const Route = createRootRoute({
   head: () => ({
@@ -35,7 +34,8 @@ export const Route = createRootRoute({
       }),
     ],
     links: [
-      // { rel: 'stylesheet', href: appCss },
+      { rel: 'stylesheet', href: appCss },
+      { rel: 'stylesheet', href: leafletCss },
       {
         rel: 'apple-touch-icon',
         sizes: '180x180',
