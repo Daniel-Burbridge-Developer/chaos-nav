@@ -10,38 +10,32 @@ function RouteComponent() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans antialiased text-gray-800">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20 md:py-24 lg:py-32 overflow-hidden shadow-lg">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between relative z-10">
-          <div className="md:w-1/2 text-center md:text-left mb-10 md:mb-0">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4 animate-fade-in-up">
-              Navigate Perth with Routyr
-            </h1>
-            <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-90 animate-fade-in-up delay-200">
-              Real-time bus tracking, route planning, and smart notifications –
-              all in one Site.
-            </p>
-            {/* This button would typically link to the main app dashboard or a login/signup page */}
-            <Button
-              size="lg"
-              className="bg-white text-blue-700 hover:bg-gray-100 transition-transform transform hover:scale-105 shadow-lg animate-fade-in-up delay-400"
-              // onClick={() => window.location.href = '/dashboard'} // Example navigation
-            >
-              Start Tracking Now
-            </Button>
-          </div>
-          <div className="md:w-1/2 flex justify-center md:justify-end animate-fade-in-right delay-600">
-            {/* Placeholder for a hero image: A stylized city map with bus routes */}
-            <img
-              src="https://weoskbh2n0.ufs.sh/f/kxDpBx5RyAdYC025Nqh1zsNE4p5MK2CuZn6tJcFeVWivR3wg"
-              alt="City Transit Map"
-              className="rounded-xl shadow-2xl border-4 border-white"
-              onError={(e) => {
-                e.currentTarget.src =
-                  "https://placehold.co/600x400/3b82f6/ffffff?text=Hero+Image";
-                e.currentTarget.alt = "Hero Image Placeholder";
-              }}
-            />
-          </div>
+      <section
+        className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20 md:py-32 lg:py-40 overflow-hidden shadow-lg flex items-center"
+        style={{
+          backgroundImage:
+            "url('https://weoskbh2n0.ufs.sh/f/kxDpBx5RyAdYC025Nqh1zsNE4p5MK2CuZn6tJcFeVWivR3wg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        <div className="absolute inset-0 bg-blue-900/60"></div>
+        <div className="container mx-auto px-4 relative z-10 flex flex-col items-center md:items-start">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6 animate-fade-in-up drop-shadow-lg text-center md:text-left">
+            Navigate Perth with <span className="text-blue-200">Routyr</span>
+          </h1>
+          <p className="text-lg md:text-2xl lg:text-3xl mb-10 opacity-90 animate-fade-in-up delay-200 max-w-2xl drop-shadow-md text-center md:text-left">
+            Real-time bus tracking, route planning, and smart notifications –
+            <br />
+            all in one Site.
+          </p>
+          <Button
+            size="lg"
+            className="bg-white text-blue-700 hover:bg-gray-100 transition-transform transform hover:scale-105 shadow-lg animate-fade-in-up delay-400"
+            // onClick={() => window.location.href = '/dashboard'}
+          >
+            Start Tracking Now
+          </Button>
         </div>
         {/* Abstract background shapes for visual appeal */}
         <div className="absolute inset-0 bg-pattern-dots opacity-10"></div>
