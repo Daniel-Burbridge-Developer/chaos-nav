@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, useMap, Marker, Popup } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  useMap,
+  Marker,
+  Popup,
+  Polyline,
+} from "react-leaflet";
 import { LatLngExpression } from "leaflet";
 import { useQuery } from "@tanstack/react-query";
 import "leaflet/dist/leaflet.css";
@@ -136,6 +143,15 @@ export function InteractiveMap({ zoom = 13 }: InteractiveMapProps) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <MapViewUpdater center={currentCenter} />
+      {stops && stops.length > 1 && (
+        <Polyline
+          positions={stops.map(
+            (stop) => [stop.lat, stop.lon] as [number, number]
+          )}
+          color="blue"
+          weight={4}
+        />
+      )}
       {stops &&
         stops.map((stop) => (
           <Marker
