@@ -19,6 +19,7 @@ interface StopLookupProps {
 }
 
 const fetchSuggestions = async (debouncedInput: string) => {
+  console.log("Fetching suggestions for:", debouncedInput);
   const response = await fetch(`/api/busstop-infoFts5/${debouncedInput}`);
   if (!response.ok) throw new Error("Failed to fetch suggestions");
   const { data } = await response.json();
@@ -44,15 +45,11 @@ const StopLookup: FC<StopLookupProps> = ({ onFormSubmit }) => {
   const normalizedInput = inputValue.replace(/\s+/g, "");
   const debouncedInput = useDebounce(normalizedInput, 300);
 
-  const {
-    data: suggestions = [],
-    isFetching,
-    isError,
-  } = useQuery({
+  const { data: suggestions = [], isFetching } = useQuery({
     queryKey: ["busstop-suggestions", debouncedInput],
     queryFn: () => fetchSuggestions(debouncedInput),
     enabled: debouncedInput.length >= 3,
-    staleTime: 1000 * 60, // 1 minute
+    staleTime: 100000 * 60, // 100 minute
   });
 
   return (
