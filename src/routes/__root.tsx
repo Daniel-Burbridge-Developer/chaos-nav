@@ -15,6 +15,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "@/components/ui/sonner";
 import TopNav from "./-components/topnav";
+import "leaflet/dist/leaflet.css";
 
 export const Route = createRootRoute({
   head: () => ({
