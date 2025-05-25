@@ -14,6 +14,7 @@ import { seo } from "~/utils/seo";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "@/components/ui/sonner";
+import TopNav from "./-components/topnav";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -82,6 +83,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <HeadContent />
         </head>
         <body>
+          <TopNav />
           {children}
           <Toaster richColors closeButton />
           <TanStackRouterDevtools position="bottom-right" />

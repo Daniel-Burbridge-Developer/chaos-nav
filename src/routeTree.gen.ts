@@ -13,6 +13,7 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as IndexImport } from './routes/index'
 import { Route as StopsIndexImport } from './routes/stops/index'
+import { Route as RoutesIndexImport } from './routes/routes/index'
 
 // Create/Update Routes
 
@@ -28,6 +29,12 @@ const StopsIndexRoute = StopsIndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
+const RoutesIndexRoute = RoutesIndexImport.update({
+  id: '/routes/',
+  path: '/routes/',
+  getParentRoute: () => rootRoute,
+} as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -37,6 +44,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/routes/': {
+      id: '/routes/'
+      path: '/routes'
+      fullPath: '/routes'
+      preLoaderRoute: typeof RoutesIndexImport
       parentRoute: typeof rootRoute
     }
     '/stops/': {
@@ -53,36 +67,41 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/routes': typeof RoutesIndexRoute
   '/stops': typeof StopsIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/routes': typeof RoutesIndexRoute
   '/stops': typeof StopsIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
+  '/routes/': typeof RoutesIndexRoute
   '/stops/': typeof StopsIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/stops'
+  fullPaths: '/' | '/routes' | '/stops'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/stops'
-  id: '__root__' | '/' | '/stops/'
+  to: '/' | '/routes' | '/stops'
+  id: '__root__' | '/' | '/routes/' | '/stops/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  RoutesIndexRoute: typeof RoutesIndexRoute
   StopsIndexRoute: typeof StopsIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  RoutesIndexRoute: RoutesIndexRoute,
   StopsIndexRoute: StopsIndexRoute,
 }
 
@@ -97,11 +116,15 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
+        "/routes/",
         "/stops/"
       ]
     },
     "/": {
       "filePath": "index.tsx"
+    },
+    "/routes/": {
+      "filePath": "routes/index.tsx"
     },
     "/stops/": {
       "filePath": "stops/index.tsx"
