@@ -1,83 +1,156 @@
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
-import { LatLngExpression, LatLng } from 'leaflet'; // Import LatLng from Leaflet
-import 'leaflet/dist/leaflet.css';
+import React, { useState, useEffect } from "react";
+import { MapContainer, TileLayer, useMap, Marker, Popup } from "react-leaflet";
+import { LatLngExpression } from "leaflet";
+import { useQuery } from "@tanstack/react-query";
+import "leaflet/dist/leaflet.css";
+
+type Stop = { id: string; name: string; lat: number; lon: number };
 
 type InteractiveMapProps = {
   zoom?: number;
 };
 
-// Component to handle map view updates
 function MapViewUpdater({ center }: { center: LatLngExpression }) {
   const map = useMap();
   useEffect(() => {
     map.setView(center, map.getZoom());
-  }, [center, map]); // Only re-run if center changes
-  return null; // This component doesn't render anything itself
+  }, [center, map]);
+  return null;
 }
 
+const fetchStops = async (): Promise<Stop[]> => {
+  // currently hardcoded to fetch stops for bus route 85
+  // You can modify this to accept a bus route number as a parameter if needed (it will be)
+  const response = await fetch("/api/bus-route/85");
+  if (!response.ok) throw new Error("Failed to fetch stops");
+  const json = await response.json();
+
+  const stops: Stop[] = [];
+
+  // Assuming json.stops is an array of objects with an 'id' property
+  for (const stop of json.stops) {
+    const newRes = await fetch(`/api/busstop-location-data/${stop.id}`);
+    if (!newRes.ok) throw new Error("Failed to fetch stop details");
+    const stopDetails = await newRes.json();
+    stops.push({
+      id: stop.id,
+      name: stopDetails.name,
+      lat: stopDetails.lat,
+      lon: stopDetails.lon,
+    });
+  }
+
+  console.log("Fetched stops LOOK RIGHT HERE:", stops);
+  return stops;
+};
+
 export function InteractiveMap({ zoom = 13 }: InteractiveMapProps) {
-  // Default to Perth, Western Australia
-  const DEFAULT_CENTER: LatLngExpression = [-31.9505, 115.8605]; // Perth, Western Australia
+  const DEFAULT_CENTER: LatLngExpression = [-31.9505, 115.8605];
   const [currentCenter, setCurrentCenter] =
     useState<LatLngExpression>(DEFAULT_CENTER);
-  const [loading, setLoading] = useState(true);
+  const [geoLocationLoaded, setGeoLocationLoaded] = useState(false); // New state to track geolocation loading
   const [error, setError] = useState<string | null>(null);
 
+  // Geolocation effect
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          // Success: Use user's location
           setCurrentCenter([
             position.coords.latitude,
             position.coords.longitude,
           ]);
-          setLoading(false);
+          setGeoLocationLoaded(true); // Set true when geolocation is resolved
         },
         (err) => {
-          // Error: Geolocation failed or permission denied
-          console.error('Geolocation error:', err);
-          setError(err.message || 'Failed to get your location.');
-          setCurrentCenter(DEFAULT_CENTER); // Fallback to default
-          setLoading(false);
+          setError(err.message || "Failed to get your location.");
+          setCurrentCenter(DEFAULT_CENTER);
+          setGeoLocationLoaded(true); // Set true even if geolocation fails
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 } // Options for getCurrentPosition
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
-      // Geolocation not supported by browser
-      setError('Geolocation is not supported by your browser.');
-      setCurrentCenter(DEFAULT_CENTER); // Fallback to default
-      setLoading(false);
+      setError("Geolocation is not supported by your browser.");
+      setCurrentCenter(DEFAULT_CENTER);
+      setGeoLocationLoaded(true); // Set true if geolocation is not supported
     }
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
-  if (loading) {
+  // TanStack Query for stops
+  const {
+    data: stops,
+    isLoading: stopsLoading,
+    error: stopsError,
+  } = useQuery({
+    queryKey: ["bus-route-85-stops"],
+    queryFn: fetchStops,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: geoLocationLoaded, // Only enable the query after geolocation has loaded
+  });
+
+  if (!geoLocationLoaded) {
     return (
-      <div className='h-[500px] w-full flex items-center justify-center bg-gray-100 rounded-lg shadow'>
-        <p className='text-gray-600'>Finding your location...</p>
+      <div className="h-[500px] w-full flex items-center justify-center bg-gray-100 rounded-lg shadow">
+        <p className="text-gray-600">Finding your location...</p>
       </div>
     );
   }
 
-  if (error && currentCenter === DEFAULT_CENTER) {
-    // Optionally show an error if it fell back to default due to an error
-    console.warn('Map loaded with default center due to:', error);
+  if (error) {
+    return (
+      <div className="h-[500px] w-full flex items-center justify-center bg-red-100 rounded-lg shadow">
+        <p className="text-red-600">
+          {error || "Failed to load map or stops."}
+        </p>
+      </div>
+    );
+  }
+
+  if (stopsLoading) {
+    return (
+      <div className="h-[500px] w-full flex items-center justify-center bg-gray-100 rounded-lg shadow">
+        <p className="text-gray-600">Loading bus stops...</p>
+      </div>
+    );
+  }
+
+  if (stopsError) {
+    return (
+      <div className="h-[500px] w-full flex items-center justify-center bg-red-100 rounded-lg shadow">
+        <p className="text-red-600">
+          {stopsError?.message || "Failed to load bus stops."}
+        </p>
+      </div>
+    );
   }
 
   return (
     <MapContainer
-      center={currentCenter} // Use the state-managed center
+      center={currentCenter}
       zoom={zoom}
       scrollWheelZoom={true}
-      className='h-[500px] w-full rounded-lg shadow'
+      className="h-[500px] w-full rounded-lg shadow"
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-        url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {/* This component ensures the map view updates when currentCenter changes */}
       <MapViewUpdater center={currentCenter} />
+      {stops &&
+        stops.map((stop) => (
+          <Marker
+            key={stop.id}
+            position={[stop.lat, stop.lon]}
+            title={stop.name}
+          >
+            <Popup>
+              <div className="text-center">
+                <h3 className="font-semibold">{stop.name}</h3>
+                <p className="text-sm text-gray-500">Stop ID: {stop.id}</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
     </MapContainer>
   );
 }
