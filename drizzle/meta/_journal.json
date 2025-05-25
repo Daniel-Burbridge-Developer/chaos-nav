@@ -22,6 +22,13 @@
       "when": 1747922386420,
       "tag": "0002_zippy_greymalkin",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1748182814175,
+      "tag": "0003_large_swordsman",
+      "breakpoints": true
     }
   ]
 }
