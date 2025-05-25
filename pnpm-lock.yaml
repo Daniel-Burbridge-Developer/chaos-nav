@@ -28,7 +28,7 @@ importers:
         version: 5.77.0
       '@tanstack/react-form':
         specifier: ^1.11.3
-        version: 1.11.3(98eaa50d20e09e040f26eeb68f3de816)
+        version: 1.11.3(ttnqklyfubfoae565trmock33i)
       '@tanstack/react-query':
         specifier: ^5.77.0
         version: 5.77.0(react@19.1.0)
@@ -5691,7 +5691,7 @@ snapshots:
       '@tanstack/query-core': 5.77.0
       '@tanstack/query-persist-client-core': 5.77.0
 
-  '@tanstack/react-form@1.11.3(98eaa50d20e09e040f26eeb68f3de816)':
+  '@tanstack/react-form@1.11.3(ttnqklyfubfoae565trmock33i)':
     dependencies:
       '@tanstack/form-core': 1.11.3
       '@tanstack/react-store': 0.7.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
