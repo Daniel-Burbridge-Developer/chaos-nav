@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import { LatLngExpression, LatLng } from 'leaflet'; // Import LatLng from Leaflet
+import 'leaflet/dist/leaflet.css';
 
 type InteractiveMapProps = {
   zoom?: number;
