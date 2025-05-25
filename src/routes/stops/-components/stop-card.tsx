@@ -9,8 +9,6 @@ type StopCardProps = {
   stopNumber: string;
 };
 
-// --- serverFns (move these to a separate file if you prefer) ---
-
 export const getStopNameByNumber = createServerFn()
   .validator((data: string) => data)
   .handler(async (ctx) => {
@@ -30,7 +28,7 @@ const resolveStopLookup = async (stopNumber: string) => {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
   const json = await response.json();
-  return json.data; // ✅ return just the array
+  return json.data;
 };
 
 // --- StopCard component ---
@@ -49,6 +47,7 @@ export default function StopCard({ stopNumber }: StopCardProps) {
   const { data: stopName } = useQuery({
     queryKey: ["stopName", stopNumber],
     queryFn: () => getStopNameByNumber({ data: stopNumber }),
+    staleTime: 1000 * 60 * 60, // 1 hour
   });
 
   if (isLoading)
