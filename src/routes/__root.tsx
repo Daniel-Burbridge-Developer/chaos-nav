@@ -13,6 +13,7 @@ import appCss from "~/styles/app.css?url";
 import { seo } from "~/utils/seo";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Analytics } from "@vercel/analytics/react";
+import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -82,6 +83,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         </head>
         <body>
           {children}
+          <Toaster richColors closeButton />
           <TanStackRouterDevtools position="bottom-right" />
           <Analytics />
           <Scripts />

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import StopLookup from "./-components/stop-lookup";
 import { useState } from "react";
 import StopCard from "./-components/stop-card";
+import { X } from "lucide-react";
 
 export const Route = createFileRoute("/stops/")({
   component: RouteComponent,
@@ -18,17 +19,28 @@ function RouteComponent() {
         </h1>
         <div>
           <StopLookup
-            onFormSubmit={(stop) => setStopList((prev) => [...prev, stop])}
+            onFormSubmit={(stop) =>
+              setStopList((prev) =>
+                prev.includes(stop) ? prev : [...prev, stop]
+              )
+            }
           />
         </div>
-        {/* change the key on this, prevent duplicate cards of the same stop, and use stop number as the key */}
         {stopList.length > 0 && (
           <div className="mt-6 space-y-4">
-            {stopList.map((stopNumber, index) => (
-              <StopCard
-                key={`${stopNumber}-${index}`}
-                stopNumber={stopNumber}
-              />
+            {stopList.map((stopNumber) => (
+              <div key={stopNumber} className="relative">
+                <button
+                  className="absolute top-2 right-2 z-10 p-1 rounded-full bg-zinc-800 hover:bg-zinc-600 text-white"
+                  aria-label="Remove stop"
+                  onClick={() =>
+                    setStopList((prev) => prev.filter((s) => s !== stopNumber))
+                  }
+                >
+                  <X size={16} />
+                </button>
+                <StopCard stopNumber={stopNumber} />
+              </div>
             ))}
           </div>
         )}

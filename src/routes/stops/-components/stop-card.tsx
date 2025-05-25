@@ -4,6 +4,7 @@ import { db } from "~/db/db";
 import { stops } from "~/db/schema/stops";
 import { eq } from "drizzle-orm";
 import { CarTaxiFront } from "lucide-react";
+import React from "react";
 
 type StopCardProps = {
   stopNumber: string;
@@ -33,33 +34,45 @@ const resolveStopLookup = async (stopNumber: string) => {
 
 // --- StopCard component ---
 
-export default function StopCard({ stopNumber }: StopCardProps) {
+const StopCard = React.memo(function StopCard({ stopNumber }: StopCardProps) {
   const {
     data: stopData,
     error,
-    isLoading,
+    isLoading: isStopDataLoading,
+    isFetching,
   } = useQuery({
     queryKey: ["stopData", stopNumber],
     queryFn: () => resolveStopLookup(stopNumber),
     refetchInterval: 30000, // 30 seconds
   });
 
-  const { data: stopName } = useQuery({
+  const { data: stopName, isLoading: isStopNameLoading } = useQuery({
     queryKey: ["stopName", stopNumber],
     queryFn: () => getStopNameByNumber({ data: stopNumber }),
     staleTime: 1000 * 60 * 60, // 1 hour
   });
 
-  if (isLoading)
+  if (isStopDataLoading)
     return <div className="p-4 bg-gray-100 rounded-xl">Loading...</div>;
   if (error)
     return <div className="text-red-500">Error loading stop {stopNumber}</div>;
 
   return (
     <div className="border rounded-xl p-4 shadow bg-white">
-      <h3 className="text-lg font-semibold text-gray-800 mb-2">
+      <h3 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
         Stop {stopNumber}
-        {stopName ? ` – ${stopName}` : ""}
+        {!isStopNameLoading ? (
+          stopName ? (
+            ` – ${stopName}`
+          ) : (
+            <span className="text-red-500"> - unable to locate stop</span>
+          )
+        ) : (
+          <span className="text-gray-500"> - loading</span>
+        )}
+        {isFetching && (
+          <CarTaxiFront className="animate-spin h-4 w-4 text-gray-400 ml-2" />
+        )}
       </h3>
       <ul className="divide-y">
         {stopData?.map((bus: any, i: number) => (
@@ -80,4 +93,6 @@ export default function StopCard({ stopNumber }: StopCardProps) {
       </ul>
     </div>
   );
-}
+});
+
+export default StopCard;
