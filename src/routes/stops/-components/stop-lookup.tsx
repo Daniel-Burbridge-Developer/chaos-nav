@@ -20,7 +20,7 @@ interface StopLookupProps {
 
 const fetchSuggestions = async (debouncedInput: string) => {
   console.log("Fetching suggestions for:", debouncedInput);
-  const response = await fetch(`/api/busstop-infoFts5/${debouncedInput}`);
+  const response = await fetch(`/api/busstop-info/${debouncedInput}`);
   if (!response.ok) throw new Error("Failed to fetch suggestions");
   const { data } = await response.json();
   return data || [];
@@ -42,7 +42,7 @@ const StopLookup: FC<StopLookupProps> = ({ onFormSubmit }) => {
     },
   });
 
-  const normalizedInput = inputValue.replace(/\s+/g, "");
+  const normalizedInput = inputValue.replace(/\s/g, "");
   const debouncedInput = useDebounce(normalizedInput, 300);
 
   const { data: suggestions = [], isFetching } = useQuery({
@@ -69,8 +69,8 @@ const StopLookup: FC<StopLookupProps> = ({ onFormSubmit }) => {
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => {
-                field.setValue(e.target.value.replace(/\s+/g, "")),
-                  setInputValue(e.target.value);
+                field.setValue(e.target.value);
+                setInputValue(e.target.value);
               }}
               autoFocus
               autoComplete="off"
