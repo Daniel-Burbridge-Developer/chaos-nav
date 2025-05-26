@@ -12,6 +12,16 @@ import { useQuery } from '@tanstack/react-query';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet'; // Import Leaflet library itself
 
+//@ts-ignore
+delete L.Icon.Default.prototype._getIconUrl;
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
+
 type Stop = { id: string; name: string; lat: number; lon: number };
 
 type InteractiveMapProps = {
