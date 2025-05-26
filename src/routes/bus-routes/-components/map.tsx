@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet'; // Import Leaflet library itself
 
+//Research lazyloading
 //@ts-ignore
 delete L.Icon.Default.prototype._getIconUrl;
 
