@@ -38,7 +38,7 @@ const TopNav = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          <Link to="/routes">
+          <Link to="/bus-routes">
             <Button
               variant="ghost"
               size="sm"
