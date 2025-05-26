@@ -71,8 +71,8 @@ export function InteractiveMap({ zoom = 16 }: InteractiveMapProps) {
   const [error, setError] = useState<string | null>(null);
 
   // New state for route input
-  const [routeInput, setRouteInput] = useState('563');
-  const [routeNumber, setRouteNumber] = useState('563');
+  const [routeInput, setRouteInput] = useState('85');
+  const [routeNumber, setRouteNumber] = useState('85');
 
   // Geolocation effect
   useEffect(() => {

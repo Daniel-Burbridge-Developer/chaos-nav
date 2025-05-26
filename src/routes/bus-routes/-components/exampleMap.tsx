@@ -7,7 +7,7 @@ import L from 'leaflet';
 
 // Fix for default marker icon issues with Webpack/Vite
 //@ts-ignore
-delete L.Icon.Default.prototype._getIconUrl;
+// delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
