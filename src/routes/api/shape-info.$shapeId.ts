@@ -22,6 +22,13 @@ const ALLOWED_ORIGINS = [
   // Add any other production domains here
 ];
 
+// In-memory cache for shape data
+const shapeCache = new Map<string, { data: ShapeEntry[]; timestamp: number }>();
+
+// Cache Time To Live (TTL) in milliseconds (e.g., 5 minutes = 300000ms)
+// Adjust this based on how often your shape data changes and how fresh you need it to be.
+const CACHE_TTL_MS = 50 * 60 * 1000; // 5 minutes cache TTL
+
 // This defines your new API route at /api/shape-info/:shapeId
 export const APIRoute = createAPIFileRoute('/api/shape-info/$shapeId')({
   // Handle OPTIONS requests for CORS preflight
@@ -45,16 +52,17 @@ export const APIRoute = createAPIFileRoute('/api/shape-info/$shapeId')({
   GET: async ({ params, request }) => {
     const origin = request.headers.get('Origin');
     // Allow if origin is missing (same-origin) or in allowed list
-    // if (origin && !ALLOWED_ORIGINS.includes(origin)) {
-    //   console.warn(
-    //     `[Shape API] Unauthorized access attempt from Origin: "${origin}"`
-    //   );
-    //   return json({ error: 'Unauthorized access' }, { status: 403 });
-    // }
+    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+      console.warn(
+        `[Shape API] Unauthorized access attempt from Origin: "${origin}"`
+      );
+      return json({ error: 'Unauthorized access' }, { status: 403 });
+    }
 
     const { shapeId } = params; // Extract shapeId from the URL parameters
+    const cacheKey = shapeId.toLowerCase(); // Use lowercase shapeId as cache key for consistency
 
-    // Basic validation for the shape_id
+    // 1. Basic validation for the shape_id
     if (!shapeId || typeof shapeId !== 'string' || shapeId.trim() === '') {
       console.warn(
         `[Shape API] Invalid or missing shapeId: "${shapeId}". Returning empty array.`
@@ -62,17 +70,24 @@ export const APIRoute = createAPIFileRoute('/api/shape-info/$shapeId')({
       return json({ data: [] }, { status: 400 }); // Bad Request
     }
 
-    try {
-      console.log(`[Shape API] Fetching shapes for shape_id: "${shapeId}"`);
+    // 2. Check cache first
+    const cachedEntry = shapeCache.get(cacheKey);
+    if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL_MS) {
+      console.log(
+        `[Shape API] Serving from cache for shape_id: "${cacheKey}".`
+      );
+      return json({ data: cachedEntry.data });
+    }
 
-      // Query the database using Drizzle ORM
+    // 3. If not in cache or expired, fetch from DB
+    console.log(`[Shape API] Fetching from DB for shape_id: "${cacheKey}".`);
+    try {
       const results = await db
         .select()
         .from(shapes)
         .where(eq(shapes.shape_id, shapeId)) // Filter by shape_id
         .orderBy(shapes.shape_pt_sequence); // Order by sequence for logical path
 
-      // Map results to the defined interface for clarity and type safety
       const mappedResults: ShapeEntry[] = results.map((row) => ({
         id: row.id,
         shape_id: row.shape_id,
@@ -81,8 +96,14 @@ export const APIRoute = createAPIFileRoute('/api/shape-info/$shapeId')({
         shape_pt_sequence: row.shape_pt_sequence,
       }));
 
+      // 4. Store fresh data in cache
+      shapeCache.set(cacheKey, {
+        data: mappedResults,
+        timestamp: Date.now(),
+      });
+
       console.log(
-        `[Shape API] Found ${mappedResults.length} entries for shape_id: "${shapeId}".`
+        `[Shape API] DB query completed. Found ${mappedResults.length} entries for shape_id: "${shapeId}". Data cached.`
       );
       return json({ data: mappedResults }); // Return the found data
     } catch (err: any) {
