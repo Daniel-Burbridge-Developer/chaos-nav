@@ -2,10 +2,10 @@
 
 Hobby Project, experimenting with transperth!
 
-- Potential Features
+- [ ] Show Markers for bus stops
+- [ ] Display any active (live) busses
+- [ ] Select bus to get live tracking
+- [ ] Search for Green Cats, etc
+- [ ] Display correct Icon for bus/train/etc
 
-- [ ] Notify Me Button
-      When a specific bus is passing a specific stop (within 15 minutes), and you have not been notified in the last 10 minutes, text your phone
-
-- [ ] Track bus route
-      Track as a specific bus is set to pass specific stops, maybe have a map
+- [ ] Clean Code up.
