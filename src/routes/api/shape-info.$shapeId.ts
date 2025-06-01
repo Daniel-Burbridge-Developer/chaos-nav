@@ -38,7 +38,8 @@ export const APIRoute = createAPIFileRoute('/api/shape-info/$shapeId')({
       return new Response(null, {
         status: 204, // No Content
         headers: {
-          'Access-Control-Allow-Origin': origin,
+          //   'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET,OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type',
           'Access-Control-Max-Age': '86400', // Cache preflight for 24 hours
@@ -52,12 +53,12 @@ export const APIRoute = createAPIFileRoute('/api/shape-info/$shapeId')({
   GET: async ({ params, request }) => {
     const origin = request.headers.get('Origin');
     // Allow if origin is missing (same-origin) or in allowed list
-    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
-      console.warn(
-        `[Shape API] Unauthorized access attempt from Origin: "${origin}"`
-      );
-      return json({ error: 'Unauthorized access' }, { status: 403 });
-    }
+    // if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    //   console.warn(
+    //     `[Shape API] Unauthorized access attempt from Origin: "${origin}"`
+    //   );
+    //   return json({ error: 'Unauthorized access' }, { status: 403 });
+    // }
 
     const { shapeId } = params; // Extract shapeId from the URL parameters
     const cacheKey = shapeId.toLowerCase(); // Use lowercase shapeId as cache key for consistency
