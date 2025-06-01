@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 // import { InteractiveMap } from './-components/map';
-import { ShapeMapDisplay } from './-components/shapeMap';
+// import { ShapeMapDisplay } from './-components/shapeMap';
+import { ShapeMapDisplay } from './-components/busMap';
 import { Suspense, lazy } from 'react';
 
 export const Route = createFileRoute('/bus-routes/')({
@@ -16,8 +17,14 @@ export const Route = createFileRoute('/bus-routes/')({
 //   }))
 // );
 
+// const LazyInteractiveMap = lazy(() =>
+//   import('./-components/shapeMap').then((module) => ({
+//     default: module.ShapeMapDisplay,
+//   }))
+// );
+
 const LazyInteractiveMap = lazy(() =>
-  import('./-components/shapeMap').then((module) => ({
+  import('./-components/busMap').then((module) => ({
     default: module.ShapeMapDisplay,
   }))
 );
