@@ -1,22 +1,24 @@
 // src/routes/api/trip-info.$tripId.ts
 import { json } from '@tanstack/react-start';
 import { createAPIFileRoute } from '@tanstack/react-start/api';
-import * as fs from 'fs/promises'; // Use fs/promises for async file operations
-import * as path from 'path'; // To resolve file paths
+import { db } from '~/db/db'; // Your Drizzle DB instance
+import { stopTimes } from '~/db/schema/stop_times'; // Import your stopTimes schema
+import { eq } from 'drizzle-orm'; // Import 'eq' for comparisons
 
-// Define the type for a single stop_time entry from your JSON
+// Define the type for a single stop_time entry as it comes from your Drizzle query.
 interface StopTimeEntry {
-  trip_id: string;
-  arrival_time: string;
-  departure_time: string;
-  stop_id: string;
-  stop_sequence: string;
-  pickup_type: string;
-  drop_off_type: string;
-  timepoint: string;
-  fare: string;
-  zone: string;
-  section: string;
+  id: number;
+  tripId: string;
+  arrivalTime: string;
+  departureTime: string;
+  stopId: string;
+  stopSequence: number;
+  pickupType: number | null;
+  dropOffType: number | null;
+  timepoint: number | null;
+  fare: number | null;
+  zone: number | null;
+  section: number | null;
 }
 
 // Define allowed origins for CORS (adjust as needed for your deployment)
@@ -27,40 +29,16 @@ const ALLOWED_ORIGINS = [
   // Add any other production domains here
 ];
 
-// In-memory cache for stop_times data
-const stopTimesCache = new Map<
+// In-memory cache for stop_times data by tripId
+// Key: tripId (string)
+// Value: { data: StopTimeEntry[], timestamp: number }
+const stopTimesByTripIdCache = new Map<
   string,
   { data: StopTimeEntry[]; timestamp: number }
 >();
 
 // Cache Time To Live (TTL) in milliseconds (e.g., 5 minutes = 300000ms)
-const CACHE_TTL_MS = 50 * 60 * 1000; // 50 minutes cache TTL for the entire dataset
-
-// Path to your JSON file
-// Using path.resolve to ensure the path is absolute regardless of where the script is run
-const JSON_FILE_PATH = path.resolve(
-  process.cwd(),
-  'src/transperth_data/stop_times.json'
-);
-
-/**
- * Loads the stop_times data from the JSON file.
- * This function will be called once to load the entire dataset into memory for caching.
- * For extremely large JSON files, you might consider a streaming approach or a real database.
- */
-async function loadStopTimesData(): Promise<StopTimeEntry[]> {
-  try {
-    const fileContent = await fs.readFile(JSON_FILE_PATH, 'utf8');
-    return JSON.parse(fileContent);
-  } catch (error) {
-    console.error(
-      `[StopTimes API] Error loading JSON file from ${JSON_FILE_PATH}:`,
-      error
-    );
-    // Depending on your error handling strategy, you might want to exit or throw
-    throw new Error('Failed to load stop_times data.');
-  }
-}
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache TTL for individual trip data
 
 // This defines your new API route at /api/trip-info/:tripId
 export const APIRoute = createAPIFileRoute('/api/trip-info/$tripId')({
@@ -71,7 +49,7 @@ export const APIRoute = createAPIFileRoute('/api/trip-info/$tripId')({
       return new Response(null, {
         status: 204, // No Content
         headers: {
-          'Access-Control-Allow-Origin': '*', // Allows all origins as per your template, but consider being more restrictive
+          'Access-Control-Allow-Origin': origin, // Be specific with origin in production
           'Access-Control-Allow-Methods': 'GET,OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type',
           'Access-Control-Max-Age': '86400', // Cache preflight for 24 hours
@@ -93,7 +71,7 @@ export const APIRoute = createAPIFileRoute('/api/trip-info/$tripId')({
     }
 
     const { tripId } = params; // Extract tripId from the URL parameters
-    const cacheKey = 'all_stop_times'; // We'll cache the entire dataset for simplicity
+    const cacheKey = tripId; // The tripId is our cache key
 
     // 1. Basic validation for the trip_id
     if (!tripId || typeof tripId !== 'string' || tripId.trim() === '') {
@@ -103,48 +81,47 @@ export const APIRoute = createAPIFileRoute('/api/trip-info/$tripId')({
       return json({ data: [] }, { status: 400 }); // Bad Request
     }
 
-    // 2. Check cache for the entire dataset first
-    let allStopTimes: StopTimeEntry[] = [];
-    const cachedEntry = stopTimesCache.get(cacheKey);
-
+    // 2. Check cache first for this specific tripId
+    const cachedEntry = stopTimesByTripIdCache.get(cacheKey);
     if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL_MS) {
-      console.log(`[StopTimes API] Serving all data from cache.`);
-      allStopTimes = cachedEntry.data;
-    } else {
-      // 3. If not in cache or expired, load from JSON file
       console.log(
-        `[StopTimes API] Loading data from JSON file: ${JSON_FILE_PATH}`
+        `[StopTimes API] Serving from cache for tripId: "${cacheKey}".`
       );
-      try {
-        allStopTimes = await loadStopTimesData();
-        // Store fresh data in cache
-        stopTimesCache.set(cacheKey, {
-          data: allStopTimes,
-          timestamp: Date.now(),
-        });
-        console.log(`[StopTimes API] JSON data loaded and cached.`);
-      } catch (err: any) {
-        console.error(`[StopTimes API] Error loading JSON data:`, err);
-        return json(
-          {
-            error:
-              'Failed to load stop_times data: ' +
-              (err.message || 'Unknown file error'),
-          },
-          { status: 500 } // Internal Server Error
-        );
-      }
+      return json({ data: cachedEntry.data });
     }
 
-    // 4. Filter the loaded data by trip_id
-    const filteredResults = allStopTimes.filter(
-      (entry) => entry.trip_id === tripId
-    );
+    // 3. If not in cache or expired, fetch from DB
+    console.log(`[StopTimes API] Fetching from DB for tripId: "${tripId}".`);
+    try {
+      const filteredResults: StopTimeEntry[] = await db
+        .select()
+        .from(stopTimes)
+        .where(eq(stopTimes.tripId, tripId));
 
-    console.log(
-      `[StopTimes API] Found ${filteredResults.length} entries for trip_id: "${tripId}".`
-    );
+      console.log(
+        `[StopTimes API] Found ${filteredResults.length} entries for trip_id: "${tripId}".`
+      );
 
-    return json({ data: filteredResults }); // Return the filtered data
+      // 4. Store fresh data in cache before returning
+      stopTimesByTripIdCache.set(cacheKey, {
+        data: filteredResults,
+        timestamp: Date.now(),
+      });
+
+      return json({ data: filteredResults }); // Return the filtered data
+    } catch (err: any) {
+      console.error(
+        `[StopTimes API] Error fetching stop times for "${tripId}" from DB:`,
+        err
+      );
+      return json(
+        {
+          error:
+            'Failed to fetch stop_times data due to server error: ' +
+            (err.message || 'Unknown DB Error'),
+        },
+        { status: 500 } // Internal Server Error
+      );
+    }
   },
 });

@@ -66,18 +66,20 @@ interface ShapeIdResponse {
 }
 
 // --- Type definition for stop_times data ---
+// UPDATED: Changed to camelCase to match Drizzle's output
 interface StopTimeEntry {
-  trip_id: string;
-  arrival_time: string;
-  departure_time: string;
-  stop_id: string;
-  stop_sequence: string;
-  pickup_type: string;
-  drop_off_type: string;
-  timepoint: string;
-  fare: string;
-  zone: string;
-  section: string;
+  id: number;
+  tripId: string; // Changed from trip_id
+  arrivalTime: string; // Changed from arrival_time
+  departureTime: string; // Changed from departure_time
+  stopId: string; // Changed from stop_id
+  stopSequence: number; // Changed from stop_sequence
+  pickupType: number | null; // Changed from pickup_type
+  dropOffType: number | null; // Changed from drop_off_type
+  timepoint: number | null; // Changed from timepoint
+  fare: number | null;
+  zone: number | null;
+  section: number | null;
 }
 
 // --- Type definition for busstop-location-data API ---
@@ -237,6 +239,7 @@ const fetchStopTimesByTripId = async (
     `[ShapeMapDisplay] Successfully fetched stop times for trip ID "${tripId}":`,
     json
   );
+  // UPDATED: Access the 'data' property from the response
   if (json.data && Array.isArray(json.data)) {
     return json.data as StopTimeEntry[];
   } else {
@@ -419,8 +422,9 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
   });
 
   // NEW: Query 5: Fetch stop locations for all unique stop_ids in stopTimesData
+  // UPDATED: Changed stop_id to stopId for consistency with StopTimeEntry interface
   const uniqueStopIds = Array.from(
-    new Set(stopTimesData?.map((st) => st.stop_id) || [])
+    new Set(stopTimesData?.map((st) => st.stopId) || [])
   );
 
   const stopLocationsQueries = useQueries({
@@ -514,8 +518,9 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
   const stopsWithCoords =
     stopTimesData
       ?.map((stopTime) => {
+        // UPDATED: Changed stop_id to stopId for consistency with StopTimeEntry interface
         const stopLocation = stopLocationsData.find(
-          (loc) => loc.number === stopTime.stop_id
+          (loc) => loc.number === stopTime.stopId
         );
         if (stopLocation) {
           return {
@@ -525,7 +530,7 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
             stop_name: stopLocation.name, // Add stop name from location data
           };
         }
-        console.warn(`No location found for stop ID: ${stopTime.stop_id}`);
+        console.warn(`No location found for stop ID: ${stopTime.stopId}`); // Changed stop_id to stopId
         return null; // Filter out stops for which we couldn't find a location
       })
       .filter(
@@ -684,7 +689,7 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
                 <p className='text-yellow-600 mb-2'>
                   Stop times found, but no corresponding locations could be
                   fetched. Please check the `busstop-location-data` API or if
-                  `stop_id`s are correct.
+                  `stopId`s are correct. {/* Changed stop_id to stopId */}
                 </p>
               )}
           </>
@@ -717,18 +722,24 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
         {/* Render Markers for Stop Times with actual locations */}
         {stopsWithCoords.map((stop, index) => (
           <Marker
-            key={`stop-${stop.stop_id}-${index}`}
+            key={`stop-${stop.stopId}-${index}`}
             position={[stop.lat, stop.lon]}
           >
             <Popup>
               <div>
                 <strong>Stop Name:</strong> {stop.stop_name || 'N/A'} <br />
-                <strong>Stop ID:</strong> {stop.stop_id} <br />
-                <strong>Sequence:</strong> {stop.stop_sequence} <br />
-                <strong>Arrival:</strong> {stop.arrival_time} <br />
-                <strong>Departure:</strong> {stop.departure_time} <br />
-                <strong>Pickup Type:</strong> {stop.pickup_type} <br />
-                <strong>Drop-off Type:</strong> {stop.drop_off_type}
+                <strong>Stop ID:</strong> {stop.stopId} <br />{' '}
+                {/* Changed stop_id to stopId */}
+                <strong>Sequence:</strong> {stop.stopSequence} <br />{' '}
+                {/* Changed stop_sequence to stopSequence */}
+                <strong>Arrival:</strong> {stop.arrivalTime} <br />{' '}
+                {/* Changed arrival_time to arrivalTime */}
+                <strong>Departure:</strong> {stop.departureTime} <br />{' '}
+                {/* Changed departure_time to departureTime */}
+                <strong>Pickup Type:</strong> {stop.pickupType} <br />{' '}
+                {/* Changed pickup_type to pickupType */}
+                <strong>Drop-off Type:</strong> {stop.dropOffType}{' '}
+                {/* Changed drop_off_type to dropOffType */}
               </div>
             </Popup>
           </Marker>
