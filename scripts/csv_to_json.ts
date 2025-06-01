@@ -44,13 +44,12 @@ async function* createLineReader(filePath: string): AsyncGenerator<string> {
  *
  * @param csvLineGenerator An AsyncGenerator that yields lines of CSV data.
  * @param delimiter The character used to separate values in the CSV (default is ',').
- * @returns A Promise that resolves to a JSON array of objects.
+ * @returns An AsyncGenerator that yields each parsed JSON row object.
  */
-async function csvToJson(
+async function* csvLineToJsonObjectGenerator(
   csvLineGenerator: AsyncGenerator<string>,
   delimiter: string = ','
-): Promise<any[]> {
-  const result: any[] = [];
+): AsyncGenerator<object> {
   let headers: string[] = [];
   let isFirstLine = true;
 
@@ -60,9 +59,6 @@ async function csvToJson(
         continue; // Skip empty lines
       }
 
-      // Split values, handling potential quoted fields if necessary (basic split for now)
-      // For more robust CSV parsing with quotes and escaped delimiters, a dedicated CSV parsing library
-      // would be recommended (e.g., 'csv-parse' for Node.js).
       const values = line.split(delimiter).map((value) => value.trim());
 
       if (isFirstLine) {
@@ -71,10 +67,9 @@ async function csvToJson(
       } else {
         const rowObject: { [key: string]: any } = {};
         for (let j = 0; j < headers.length; j++) {
-          // Assign value to its corresponding header, handling cases where a row might have fewer values than headers
           rowObject[headers[j]] = values[j] !== undefined ? values[j] : null;
         }
-        result.push(rowObject);
+        yield rowObject; // Yield each row object instead of pushing to an array
       }
     }
   } catch (error) {
@@ -83,8 +78,6 @@ async function csvToJson(
       `Conversion failed: ${error instanceof Error ? error.message : String(error)}`
     );
   }
-
-  return result;
 }
 
 /**
@@ -92,44 +85,59 @@ async function csvToJson(
  * It expects input and output file paths as arguments.
  */
 async function main() {
-  // Process command-line arguments: node dist/script.js <inputFile> <outputFile> [delimiter]
-  const args = process.argv.slice(2); // Skip 'node' and 'script.js'
+  const args = process.argv.slice(2);
 
   if (args.length < 2) {
     console.log(
       'Usage: ts-node your-script.ts <input-csv-file> <output-json-file> [delimiter]'
     );
-    console.log('Example: ts-node your-script.ts input.csv output.json;');
+    console.log('Example: ts-node your-script.ts input.csv output.json');
     process.exit(1);
   }
 
   const inputFilePath = args[0];
   const outputFilePath = args[1];
-  const delimiter = args[2] || ','; // Default delimiter is comma
+  const delimiter = args[2] || ',';
 
   console.log(
     `Converting '${inputFilePath}' to '${outputFilePath}' using delimiter '${delimiter}'...`
   );
 
   try {
-    // Check if input file exists
     if (!fs.existsSync(inputFilePath)) {
       throw new Error(`Input file not found: ${inputFilePath}`);
     }
 
     const lineReader = createLineReader(inputFilePath);
-    const jsonOutput = await csvToJson(lineReader, delimiter);
+    const jsonObjectGenerator = csvLineToJsonObjectGenerator(
+      lineReader,
+      delimiter
+    );
 
-    if (jsonOutput.length === 0) {
-      console.warn(
-        'Warning: The input CSV file appears to be empty or contains only headers.'
-      );
+    const outputStream = fs.createWriteStream(outputFilePath, {
+      encoding: 'utf8',
+    });
+
+    outputStream.write('[\n'); // Start of JSON array
+
+    let isFirstRow = true;
+    for await (const rowObject of jsonObjectGenerator) {
+      if (!isFirstRow) {
+        outputStream.write(',\n'); // Add comma and newline for subsequent objects
+      }
+      outputStream.write(JSON.stringify(rowObject, null, 2)); // Write each object with indentation
+      isFirstRow = false;
     }
 
-    const jsonString = JSON.stringify(jsonOutput, null, 2);
+    outputStream.write('\n]\n'); // End of JSON array
 
-    // Write the JSON output to the specified file
-    fs.writeFileSync(outputFilePath, jsonString, 'utf8');
+    outputStream.end(); // Close the output stream
+
+    // Wait for the stream to finish writing
+    await new Promise((resolve, reject) => {
+      outputStream.on('finish', resolve);
+      outputStream.on('error', reject);
+    });
 
     console.log(`Conversion complete! JSON saved to '${outputFilePath}'.`);
   } catch (error) {
