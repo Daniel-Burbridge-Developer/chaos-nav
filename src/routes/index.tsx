@@ -53,7 +53,7 @@ export default function RouteComponent() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className='hidden md:block'>
-                <BreadcrumbLink href='#'>Bus Routes</BreadcrumbLink>
+                <BreadcrumbLink href='#'>Bus Route</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className='hidden md:block' />
               <BreadcrumbItem>
@@ -71,6 +71,10 @@ export default function RouteComponent() {
             <LazyInteractiveMap selectedRoute={selectedRoute} />
           </Suspense>
         </div>
+        <footer className='mt-8 px-4 py-2 text-xs text-muted-foreground text-center border-t'>
+          TP-Scry is an independent project and is not affiliated with
+          Transperth. All data is sourced from publicly accessible information.
+        </footer>
       </SidebarInset>
     </SidebarProvider>
   );
