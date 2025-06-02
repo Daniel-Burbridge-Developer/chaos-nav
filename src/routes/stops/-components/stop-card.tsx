@@ -1,80 +1,70 @@
-import { useQuery } from "@tanstack/react-query";
-import { createServerFn } from "@tanstack/react-start";
-import { db } from "~/db/db";
-import { stops } from "~/db/schema/stops";
-import { eq } from "drizzle-orm";
-import { CarTaxiFront } from "lucide-react";
-import React from "react";
+// src/routes/stops/-components/stop-card.tsx
+
+import React from 'react';
+// Assuming the Stop type is either globally available or defined here for clarity.
+// In a larger project, you'd typically import this from a shared types/schema file.
+interface Stop {
+  id: number; // Corresponds to 'number' in your schema, but often referred to as 'id'
+  name: string;
+  lat: number | null;
+  lon: number | null;
+  zone_id: string | null;
+  supported_modes: string[] | null;
+}
 
 type StopCardProps = {
-  stopNumber: string;
-};
-
-export const getStopNameByNumber = createServerFn()
-  .validator((data: string) => data)
-  .handler(async (ctx) => {
-    console.log(ctx.data, "is being resolved");
-    const result = await db
-      .select({ name: stops.name })
-      .from(stops)
-      .where(eq(stops.number, ctx.data))
-      .limit(1);
-
-    return result?.[0]?.name ?? null;
-  });
-
-const resolveStopLookup = async (stopNumber: string) => {
-  const response = await fetch(`/api/bus-stop-lookup/${stopNumber}`);
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-  const json = await response.json();
-  return json.data;
+  stop: Stop; // Now accepts the full Stop object
 };
 
 // --- StopCard component ---
 
-const StopCard = React.memo(function StopCard({ stopNumber }: StopCardProps) {
-  const {
-    data: stopData,
-    error,
-    isLoading: isStopDataLoading,
-    isFetching,
-  } = useQuery({
-    queryKey: ["stopData", stopNumber],
-    queryFn: () => resolveStopLookup(stopNumber),
-    refetchInterval: 30000, // 30 seconds
-  });
+const StopCard = React.memo(function StopCard({ stop }: StopCardProps) {
+  // No need for useQuery calls here anymore, as the stop data is passed directly
+  // through props from the parent RouteComponent.
+  // The previous 'stopData' (bus arrival info) and 'stopName' fetches are removed.
 
-  const { data: stopName, isLoading: isStopNameLoading } = useQuery({
-    queryKey: ["stopName", stopNumber],
-    queryFn: () => getStopNameByNumber({ data: stopNumber }),
-    staleTime: 1000 * 60 * 60, // 1 hour
-  });
-
-  if (isStopDataLoading)
-    return <div className="p-4 bg-gray-100 rounded-xl">Loading...</div>;
-  if (error)
-    return <div className="text-red-500">Error loading stop {stopNumber}</div>;
+  if (!stop) {
+    // Basic check if stop prop is somehow null/undefined (though it should be a Stop object)
+    return (
+      <div className='p-4 bg-gray-100 rounded-xl text-red-500'>
+        Error: Stop data missing.
+      </div>
+    );
+  }
 
   return (
-    <div className="border rounded-xl p-4 shadow bg-white">
-      <h3 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
-        Stop {stopNumber}
-        {!isStopNameLoading ? (
-          stopName ? (
-            ` – ${stopName}`
-          ) : (
-            <span className="text-red-500"> - unable to locate stop</span>
-          )
+    <div className='border rounded-xl p-4 shadow bg-white'>
+      <h3 className='text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2'>
+        Stop {stop.id}
+        {stop.name ? (
+          ` – ${stop.name}`
         ) : (
-          <span className="text-gray-500"> - loading</span>
+          <span className='text-red-500'> - Name not available</span>
         )}
-        {isFetching && (
-          <CarTaxiFront className="animate-spin h-4 w-4 text-gray-400 ml-2" />
-        )}
+        {/* Removed isFetching indicator as no data is being fetched directly here */}
       </h3>
-      <ul className="divide-y">
+      <div className='text-sm text-gray-600 mb-2'>
+        {stop.lat && stop.lon
+          ? `Lat: ${stop.lat.toFixed(4)}, Lon: ${stop.lon.toFixed(4)}`
+          : 'Location unknown'}
+      </div>
+      {stop.zone_id && (
+        <div className='text-sm text-gray-600 mb-2'>Zone: {stop.zone_id}</div>
+      )}
+      {stop.supported_modes && stop.supported_modes.length > 0 && (
+        <div className='text-sm text-gray-600'>
+          Modes: {stop.supported_modes.join(', ')}
+        </div>
+      )}
+
+      {/* The section below for 'bus.busNumber', 'bus.destination', 'bus.timeUntilArrival'
+          and 'bus.liveStatus' was for live bus arrival data.
+          Since we removed the API call for that data, this section is commented out.
+          If you need this functionality, a new API endpoint for live arrivals at a stop
+          and a separate data fetching mechanism would be required.
+      */}
+      {/*
+      <ul className="divide-y mt-4">
         {stopData?.map((bus: any, i: number) => (
           <li key={i} className="py-2 flex justify-between items-center">
             <div>
@@ -91,6 +81,7 @@ const StopCard = React.memo(function StopCard({ stopNumber }: StopCardProps) {
           </li>
         ))}
       </ul>
+      */}
     </div>
   );
 });

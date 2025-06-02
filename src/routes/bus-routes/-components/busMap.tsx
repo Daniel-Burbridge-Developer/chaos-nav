@@ -25,80 +25,64 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
-// --- Type definitions for Shape data from API ---
-interface ShapeEntry {
-  // From shape-info.json
-  id: number;
-  shape_id: string;
-  shape_pt_lat: number;
-  shape_pt_lon: number;
-  shape_pt_sequence: number;
-}
+// --- Type Definitions (Aligned with your Drizzle schemas and new API responses) ---
 
-// --- Type definitions for Trip data from API ---
-interface RouteInfo {
-  // From tripfromroute.json
-  route_id: string;
-  route_short_name: string | null;
-  route_long_name: string | null;
-}
-
-interface TripInfo {
-  // From tripfromroute.json
-  trip_id: string;
-  route_id: string;
-  trip_headsign: string | null;
-  shape_id?: string | null;
-}
-
-interface TripResponse {
-  // From tripfromroute.json
-  route?: RouteInfo;
-  trip_ids: string[];
-  trips_details?: TripInfo[];
-}
-
-// --- Type definition for the response of /api/shape-by-trip/{tripId} ---
-interface ShapeIdResponse {
-  // From shapebytrip.json
-  trip_id: string;
-  shape_id: string | null;
-}
-
-// --- Type definition for stop_times data ---
-// UPDATED: Changed to camelCase to match Drizzle's output
-interface StopTimeEntry {
-  id: number;
-  tripId: string; // Changed from trip_id
-  arrivalTime: string; // Changed from arrival_time
-  departureTime: string; // Changed from departure_time
-  stopId: string; // Changed from stop_id
-  stopSequence: number; // Changed from stop_sequence
-  pickupType: number | null; // Changed from pickup_type
-  dropOffType: number | null; // Changed from drop_off_type
-  timepoint: number | null; // Changed from timepoint
-  fare: number | null;
-  zone: number | null;
-  section: number | null;
-}
-
-// --- Type definition for busstop-location-data API ---
-interface StopLocationEntry {
-  id: number;
+// Type for a Stop as returned by /api/v1/stop/:stopId
+interface StopDetails {
+  id: number; // Corresponds to 'number' in your schema, but often referred to as 'id'
   name: string;
-  number: string; // This is the stop_id
+  lat: number | null;
+  lon: number | null;
+  zone_id: string | null;
+  supported_modes: string[] | null;
+}
+
+// Type for a TripStop as found within the 'stops' JSONB of a Trip schema
+interface TripStop {
+  id: string; // Corresponds to stop_id
+  arrivalTime: string;
+  stopSequence: number;
+}
+
+// Type for a Trip as returned by /api/v1/trips/by/route/:routeId AND /api/v1/trip/:tripId
+// This should match your Drizzle 'Trip' type from schema.ts
+interface Trip {
+  id: string;
+  route_id: string;
+  service_id: string;
+  direction_id: number | null;
+  trip_headsign: string | null;
+  shape_id: string | null;
+  stops: TripStop[] | null; // This is the JSONB array of TripStop
+}
+
+// Type for a ShapePoint as returned by /api/v1/shape/:shapeId
+interface ShapePoint {
   lat: number;
   lon: number;
-  zone_id: number;
+  sequence: number;
 }
 
-// --- NEW: Type for frontend headsign selection ---
+// Type for frontend headsign selection
 interface HeadsignTripSelection {
   headsign: string;
   trip_id: string; // The randomly selected trip_id for this headsign
 }
 
-// MapViewUpdater component (reused)
+// Type for a stop with its coordinates and name, derived from TripStop and StopDetails
+interface StopWithCoords extends TripStop {
+  lat: number;
+  lon: number;
+  stop_name: string;
+}
+
+// Type for the Route details returned by /api/v1/routes/:busNumber
+interface RouteDetails {
+  id: string; // This is the route_id (e.g., "route-85")
+  name: string | null; // This is either short_name or long_name
+}
+
+// MapViewUpdater component (reused from previous version)
 function MapViewUpdater({
   center,
   bounds,
@@ -117,168 +101,152 @@ function MapViewUpdater({
   return null;
 }
 
-// --- Data Fetching Function for Trips by Route API ---
-const fetchTripsByRoute = async (routeQuery: string): Promise<TripResponse> => {
-  console.log(
-    `[ShapeMapDisplay] Attempting to fetch trips for route: ${routeQuery}`
-  );
-  const response = await fetch(`/api/trip-from-route-exact/${routeQuery}`);
-  if (!response.ok) {
-    const status = response.status;
-    const statusText = response.statusText;
-    let errorBody: any = {};
-    try {
-      errorBody = await response.json();
-    } catch (e) {
-      /* ... */
-    }
-    console.error(
-      `[ShapeMapDisplay] API Error for route "${routeQuery}": HTTP Status: ${status} ${statusText}`,
-      errorBody
-    );
-    throw new Error(
-      errorBody.error ||
-        errorBody.message ||
-        `Failed to fetch trips for route: ${routeQuery} (HTTP ${status})`
-    );
-  }
-  const json: TripResponse = await response.json();
-  console.log(
-    `[ShapeMapDisplay] Successfully fetched trips for route "${routeQuery}":`,
-    json
-  );
-  return json;
-};
+// --- Data Fetching Functions (Updated to use new API endpoints) ---
 
-// --- Data Fetching Function for Shape ID by Trip ID API ---
-const fetchShapeIdByTrip = async (tripId: string): Promise<ShapeIdResponse> => {
+/**
+ * Fetches route details (including route_id) for a given bus number.
+ * Uses the /api/v1/routes/:busNumber endpoint.
+ * @param busNumber The user-entered bus number (e.g., "85").
+ * @returns A promise resolving to an array of RouteDetails objects.
+ */
+const fetchRouteDetailsByBusNumber = async (
+  busNumber: string
+): Promise<RouteDetails[]> => {
   console.log(
-    `[ShapeMapDisplay] Attempting to fetch shape_id for trip ID: ${tripId}`
+    `[ShapeMapDisplay] Fetching route details for bus number: ${busNumber}`
   );
-  const response = await fetch(`/api/shape-by-trip/${tripId}`);
+  const response = await fetch(
+    `/api/v1/routes/${encodeURIComponent(busNumber)}`
+  ); // UPDATED
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
-    const status = response.status;
-    console.error(
-      `[ShapeMapDisplay] API Error fetching shape_id for trip ID "${tripId}": HTTP ${status}`,
-      errorBody
-    );
     throw new Error(
       errorBody.error ||
-        `Failed to fetch shape_id for trip ID: ${tripId} (HTTP ${status})`
+        `Failed to fetch route details for bus number ${busNumber} (HTTP ${response.status})`
     );
   }
-  const json: ShapeIdResponse = await response.json();
+  const routes: RouteDetails[] = await response.json();
   console.log(
-    `[ShapeMapDisplay] Successfully fetched shape_id for trip ID "${tripId}":`,
-    json
+    `[ShapeMapDisplay] Fetched ${routes.length} route details for bus number "${busNumber}".`
   );
-  return json;
+  return routes;
 };
 
-// --- Data Fetching Function for Shape Points by Shape ID API ---
+/**
+ * Fetches trips for a given route ID.
+ * Uses the /api/v1/trips-by-route/:routeId endpoint.
+ * @param routeId The ID of the route.
+ * @returns A promise resolving to an array of Trip objects.
+ */
+const fetchTripsByRoute = async (routeId: string): Promise<Trip[]> => {
+  console.log(`[ShapeMapDisplay] Fetching trips for route ID: ${routeId}`);
+  const response = await fetch(
+    `/api/v1/trips-by-route/${encodeURIComponent(routeId)}` // UPDATED
+  );
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(
+      errorBody.error ||
+        `Failed to fetch trips for route ${routeId} (HTTP ${response.status})`
+    );
+  }
+  const trips: Trip[] = await response.json();
+  console.log(
+    `[ShapeMapDisplay] Fetched ${trips.length} trips for route ID "${routeId}".`
+  );
+  return trips;
+};
+
+/**
+ * Fetches a single trip by its ID.
+ * Uses the /api/v1/trip/:tripId endpoint.
+ * @param tripId The ID of the trip.
+ * @returns A promise resolving to a Trip object or null if not found.
+ */
+const fetchTripById = async (tripId: string): Promise<Trip | null> => {
+  console.log(`[ShapeMapDisplay] Fetching trip details for trip ID: ${tripId}`);
+  const response = await fetch(`/api/v1/trip/${encodeURIComponent(tripId)}`); // UPDATED
+  if (!response.ok) {
+    // If 404, it means trip not found, return null instead of throwing error
+    if (response.status === 404) {
+      console.warn(`[ShapeMapDisplay] Trip ID ${tripId} not found.`);
+      return null;
+    }
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(
+      errorBody.error ||
+        `Failed to fetch trip ${tripId} (HTTP ${response.status})`
+    );
+  }
+  const trip: Trip = await response.json();
+  console.log(
+    `[ShapeMapDisplay] Fetched trip details for trip ID "${tripId}".`
+  );
+  return trip;
+};
+
+/**
+ * Fetches shape points for a given shape ID.
+ * Uses the /api/v1/shape/:shapeId endpoint.
+ * @param shapeId The ID of the shape.
+ * @returns A promise resolving to an array of ShapePoint objects.
+ */
 const fetchShapePointsByShapeId = async (
   shapeId: string
-): Promise<ShapeEntry[]> => {
+): Promise<ShapePoint[]> => {
   console.log(
-    `[ShapeMapDisplay] Attempting to fetch shape entries for shape ID: ${shapeId}`
+    `[ShapeMapDisplay] Fetching shape points for shape ID: ${shapeId}`
   );
-  const response = await fetch(`/api/shape-info/${shapeId}`);
+  const response = await fetch(`/api/v1/shape/${encodeURIComponent(shapeId)}`); // UPDATED
   if (!response.ok) {
+    // If 404, it means shape not found, return empty array
+    if (response.status === 404) {
+      console.warn(`[ShapeMapDisplay] Shape ID ${shapeId} not found.`);
+      return [];
+    }
     const errorBody = await response.json().catch(() => ({}));
-    const status = response.status;
-    console.error(
-      `[ShapeMapDisplay] API Error for shape ID "${shapeId}": HTTP ${status}`,
-      errorBody
-    );
     throw new Error(
       errorBody.error ||
-        `Failed to fetch shape data for ID: ${shapeId} (HTTP ${status})`
+        `Failed to fetch shape points for shape ID ${shapeId} (HTTP ${response.status})`
     );
   }
-  const json = await response.json();
+  const shapePoints: ShapePoint[] = await response.json();
+  // Sort shape points by sequence to ensure correct polyline drawing order
+  const sortedShapePoints = shapePoints.sort((a, b) => a.sequence - b.sequence);
   console.log(
-    `[ShapeMapDisplay] Successfully fetched shape entries for shape ID "${shapeId}":`,
-    json
+    `[ShapeMapDisplay] Fetched ${sortedShapePoints.length} shape points for shape ID "${shapeId}".`
   );
-  if (json.data && Array.isArray(json.data)) {
-    return json.data as ShapeEntry[];
-  } else {
-    console.error(
-      `[ShapeMapDisplay] Unexpected response structure for shape ID "${shapeId}", expected { data: array } :`,
-      json
-    );
-    throw new Error(
-      `Unexpected data structure from shape-info API for shape ID: ${shapeId}`
-    );
-  }
+  return sortedShapePoints;
 };
 
-// --- Data Fetching Function for Stop Times by Trip ID API ---
-const fetchStopTimesByTripId = async (
-  tripId: string
-): Promise<StopTimeEntry[]> => {
-  console.log(
-    `[ShapeMapDisplay] Attempting to fetch stop times for trip ID: ${tripId}`
-  );
-  const response = await fetch(`/api/trip-info/${tripId}`);
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    const status = response.status;
-    console.error(
-      `[ShapeMapDisplay] API Error fetching stop times for trip ID "${tripId}": HTTP ${status}`,
-      errorBody
-    );
-    throw new Error(
-      errorBody.error ||
-        `Failed to fetch stop times for trip ID: ${tripId} (HTTP ${status})`
-    );
-  }
-  const json = await response.json();
-  console.log(
-    `[ShapeMapDisplay] Successfully fetched stop times for trip ID "${tripId}":`,
-    json
-  );
-  // UPDATED: Access the 'data' property from the response
-  if (json.data && Array.isArray(json.data)) {
-    return json.data as StopTimeEntry[];
-  } else {
-    console.error(
-      `[ShapeMapDisplay] Unexpected response structure for stop times for trip ID "${tripId}", expected { data: array } :`,
-      json
-    );
-    throw new Error(
-      `Unexpected data structure from trip-info API for trip ID: ${tripId}`
-    );
-  }
-};
-
-// --- NEW: Data Fetching Function for Stop Location by Stop ID API ---
+/**
+ * Fetches stop location details for a given stop ID.
+ * Uses the /api/v1/stop/:stopId endpoint.
+ * @param stopId The ID of the stop.
+ * @returns A promise resolving to a StopDetails object or null if not found.
+ */
 const fetchStopLocationByStopId = async (
   stopId: string
-): Promise<StopLocationEntry> => {
+): Promise<StopDetails | null> => {
   console.log(
-    `[ShapeMapDisplay] Attempting to fetch stop location for stop ID: ${stopId}`
+    `[ShapeMapDisplay] Fetching stop location for stop ID: ${stopId}`
   );
-  const response = await fetch(`/api/busstop-location-data/${stopId}`);
+  const response = await fetch(`/api/v1/stop/${encodeURIComponent(stopId)}`); // UPDATED
   if (!response.ok) {
+    // If 404, it means stop not found, return null
+    if (response.status === 404) {
+      console.warn(`[ShapeMapDisplay] Stop ID ${stopId} not found.`);
+      return null;
+    }
     const errorBody = await response.json().catch(() => ({}));
-    const status = response.status;
-    console.error(
-      `[ShapeMapDisplay] API Error fetching stop location for stop ID "${stopId}": HTTP ${status}`,
-      errorBody
-    );
     throw new Error(
       errorBody.error ||
-        `Failed to fetch stop location for stop ID: ${stopId} (HTTP ${status})`
+        `Failed to fetch stop location for stop ID ${stopId} (HTTP ${response.status})`
     );
   }
-  const json: StopLocationEntry = await response.json();
-  console.log(
-    `[ShapeMapDisplay] Successfully fetched stop location for stop ID "${stopId}":`,
-    json
-  );
-  return json;
+  const stopLocation: StopDetails = await response.json();
+  console.log(`[ShapeMapDisplay] Fetched location for stop ID "${stopId}".`);
+  return stopLocation;
 };
 
 // --- ShapeMapDisplay Component ---
@@ -297,14 +265,17 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
   const [userError, setUserError] = useState<string | null>(null);
 
   const [routeQueryInput, setRouteQueryInput] = useState('');
-  const [currentRouteQuery, setCurrentRouteQuery] = useState('');
+  const [currentRouteQuery, setCurrentRouteQuery] = useState(''); // User's raw bus number input
 
-  // NEW: State for frontend-processed headsign selections
+  // State for frontend-processed headsign selections
   const [headsignSelections, setHeadsignSelections] = useState<
     HeadsignTripSelection[]
   >([]);
-  // NEW: State to hold the trip_id selected by the user from the dropdown
+  // State to hold the trip_id selected by the user from the dropdown
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+
+  // NEW State to track if the map has already fitted to the current route's initial data
+  const [hasFittedToCurrentRoute, setHasFittedToCurrentRoute] = useState(false);
 
   // --- Geolocation Effect ---
   useEffect(() => {
@@ -332,29 +303,52 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
     }
   }, []); // Run once on component mount
 
-  // --- Query 1: Fetch trips by route (This remains the same) ---
+  // --- NEW Query 1: Fetch Route Details (route_id and name) by Bus Number ---
   const {
-    data: tripsData,
-    isLoading: tripsLoading,
-    error: tripsError,
-  } = useQuery<TripResponse, Error>({
-    queryKey: ['trips-by-route', currentRouteQuery],
-    queryFn: () => fetchTripsByRoute(currentRouteQuery),
+    data: routeDetailsData, // This will be an array of RouteDetails objects
+    isLoading: routeDetailsLoading,
+    error: routeDetailsError,
+  } = useQuery<RouteDetails[], Error>({
+    queryKey: ['route-details', currentRouteQuery],
+    queryFn: () => fetchRouteDetailsByBusNumber(currentRouteQuery),
     staleTime: 1000 * 60 * 5,
-    enabled: !!currentRouteQuery && geoLocationLoaded, // Only enable if routeQuery is set and geo is loaded
+    enabled: !!currentRouteQuery && geoLocationLoaded, // Only enabled if bus number is provided and geo is loaded
   });
 
-  // --- NEW: Effect to process tripsData and populate headsignSelections ---
+  // Extract the actual route_id to use for fetching trips
+  // Assuming the first result is the one we want, or null if no routes found
+  const resolvedRouteId =
+    routeDetailsData && routeDetailsData.length > 0
+      ? routeDetailsData[0].id
+      : null;
+  const resolvedRouteName =
+    routeDetailsData && routeDetailsData.length > 0
+      ? routeDetailsData[0].name
+      : null;
+
+  // --- Query 2: Fetch trips by RESOLVED route ID ---
+  const {
+    data: tripsData, // This will be an array of Trip objects
+    isLoading: tripsLoading,
+    error: tripsError,
+  } = useQuery<Trip[], Error>({
+    queryKey: ['trips-by-route', resolvedRouteId], // Depends on the resolved route ID
+    queryFn: () => fetchTripsByRoute(resolvedRouteId!), // Assert non-null because enabled condition
+    staleTime: 1000 * 60 * 5,
+    enabled: !!resolvedRouteId && !routeDetailsLoading && geoLocationLoaded, // Only enable if route ID is resolved
+  });
+
+  // --- Effect to process tripsData and populate headsignSelections ---
   useEffect(() => {
-    if (tripsData?.trips_details && tripsData.trips_details.length > 0) {
+    if (tripsData && tripsData.length > 0) {
       const tripsByHeadsign = new Map<string, string[]>();
 
-      tripsData.trips_details.forEach((trip) => {
+      tripsData.forEach((trip) => {
         const headsign = trip.trip_headsign || 'Unknown Headsign';
         if (!tripsByHeadsign.has(headsign)) {
           tripsByHeadsign.set(headsign, []);
         }
-        tripsByHeadsign.get(headsign)?.push(trip.trip_id);
+        tripsByHeadsign.get(headsign)?.push(trip.id); // Use trip.id
       });
 
       const processedSelections: HeadsignTripSelection[] = [];
@@ -380,70 +374,53 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
     }
   }, [tripsData]); // Re-run this effect whenever 'tripsData' changes
 
-  // --- All subsequent queries now depend on 'selectedTripId' ---
-
-  // Query 2: Fetch shape_id using the selected tripId
+  // --- Query 3: Fetch details of the selected trip ---
   const {
-    data: shapeIdData,
-    isLoading: shapeIdLoading,
-    error: shapeIdError,
-  } = useQuery<ShapeIdResponse, Error>({
-    queryKey: ['shapeId-by-trip', selectedTripId], // Key depends on selectedTripId
-    queryFn: () => fetchShapeIdByTrip(selectedTripId!), // Assert non-null because enabled condition
+    data: selectedTripDetails, // This will be a single Trip object or null
+    isLoading: selectedTripLoading,
+    error: selectedTripError,
+  } = useQuery<Trip | null, Error>({
+    queryKey: ['trip-details', selectedTripId],
+    queryFn: () => fetchTripById(selectedTripId!), // Assert non-null because enabled condition
     staleTime: 1000 * 60 * 5,
     enabled: !!selectedTripId && !tripsLoading && geoLocationLoaded, // Only enable if a tripId is selected
   });
 
-  // Determine shape_id for fetching actual shape points
-  const actualShapeIdToFetch = shapeIdData?.shape_id || '';
+  // Determine shape_id and stop_ids from the selectedTripDetails
+  const actualShapeIdToFetch = selectedTripDetails?.shape_id || '';
+  const uniqueStopIdsInSelectedTrip = Array.from(
+    new Set(selectedTripDetails?.stops?.map((st) => st.id) || [])
+  );
 
-  // Query 3: Fetch shape entries (points) using the fetched shape_id
+  // --- Query 4: Fetch shape entries (points) using the fetched shape_id ---
   const {
     data: shapeEntries,
     isLoading: shapePointsLoading,
     error: shapePointsError,
-  } = useQuery<ShapeEntry[], Error>({
+  } = useQuery<ShapePoint[], Error>({
     queryKey: ['shape-points', actualShapeIdToFetch],
     queryFn: () => fetchShapePointsByShapeId(actualShapeIdToFetch),
     staleTime: 1000 * 60 * 5,
-    enabled: !!actualShapeIdToFetch && !shapeIdLoading && geoLocationLoaded,
+    enabled:
+      !!actualShapeIdToFetch && !selectedTripLoading && geoLocationLoaded,
   });
 
-  // Query 4: Fetch stop times for the selected tripId
-  const {
-    data: stopTimesData,
-    isLoading: stopTimesLoading,
-    error: stopTimesError,
-  } = useQuery<StopTimeEntry[], Error>({
-    queryKey: ['stop-times', selectedTripId], // Key depends on selectedTripId
-    queryFn: () => fetchStopTimesByTripId(selectedTripId!), // Assert non-null
-    staleTime: 1000 * 60 * 5,
-    enabled: !!selectedTripId && !tripsLoading && geoLocationLoaded, // Only enable if a tripId is selected
-  });
-
-  // NEW: Query 5: Fetch stop locations for all unique stop_ids in stopTimesData
-  // UPDATED: Changed stop_id to stopId for consistency with StopTimeEntry interface
-  const uniqueStopIds = Array.from(
-    new Set(stopTimesData?.map((st) => st.stopId) || [])
-  );
-
+  // --- Query 5: Fetch stop locations for all unique stop IDs in the selected trip's stops ---
   const stopLocationsQueries = useQueries({
-    queries: uniqueStopIds.map((stopId) => ({
+    queries: uniqueStopIdsInSelectedTrip.map((stopId) => ({
       queryKey: ['stop-location', stopId],
       queryFn: () => fetchStopLocationByStopId(stopId),
       staleTime: 1000 * 60 * 60, // Locations are likely more static, cache longer
-      // Only enable if stopTimesData is available AND a trip is selected
       enabled:
-        !!stopTimesData &&
-        uniqueStopIds.length > 0 &&
-        !!selectedTripId &&
+        !!selectedTripDetails && // Ensure trip details are loaded
+        uniqueStopIdsInSelectedTrip.length > 0 &&
         geoLocationLoaded,
     })),
   });
 
-  const stopLocationsData: StopLocationEntry[] = stopLocationsQueries
+  const stopLocationsData: StopDetails[] = stopLocationsQueries
     .filter((query) => query.isSuccess && query.data)
-    .map((query) => query.data as StopLocationEntry);
+    .map((query) => query.data as StopDetails);
 
   const stopLocationsLoading = stopLocationsQueries.some(
     (query) => query.isLoading
@@ -452,19 +429,92 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
     (query) => query.isError
   );
 
-  // --- Map Bounds Effect ---
+  // --- Map Bounds Effect (Adjusted to only fit once per route search) ---
   useEffect(() => {
-    if (shapeEntries && shapeEntries.length > 0) {
-      const latLngs = shapeEntries.map((entry) => [
-        entry.shape_pt_lat,
-        entry.shape_pt_lon,
-      ]);
-      const bounds = L.latLngBounds(latLngs as L.LatLngExpression[]);
-      setMapBounds(bounds.isValid() ? bounds : undefined);
-    } else {
-      setMapBounds(undefined);
+    // This effect should run when:
+    // 1. `resolvedRouteId` changes (new route search)
+    // 2. `selectedTripId` becomes available for the *first time* for this `resolvedRouteId`
+    // 3. We haven't already fitted the map for this specific `resolvedRouteId`
+    // 4. `geoLocationLoaded` is true to ensure map is ready
+
+    if (
+      resolvedRouteId &&
+      selectedTripId &&
+      !hasFittedToCurrentRoute &&
+      geoLocationLoaded
+    ) {
+      // Find the details for the currently selected trip (which is the first one selected by default)
+      const tripForBounds = tripsData?.find(
+        (trip) => trip.id === selectedTripId
+      );
+
+      if (tripForBounds) {
+        const fetchAndSetBounds = async () => {
+          let combinedLatLngs: LatLngExpression[] = [];
+
+          // Fetch shape points for this trip's shape_id
+          if (tripForBounds.shape_id) {
+            try {
+              const shapeData = await fetchShapePointsByShapeId(
+                tripForBounds.shape_id
+              );
+              combinedLatLngs = shapeData.map((point) => [
+                point.lat,
+                point.lon,
+              ]);
+            } catch (e) {
+              console.error('Error fetching shape for initial bounds:', e);
+            }
+          }
+
+          // If no shape points, try to use stop locations from the initial trip's stops
+          if (
+            combinedLatLngs.length === 0 &&
+            tripForBounds.stops &&
+            tripForBounds.stops.length > 0
+          ) {
+            const stopPromises = tripForBounds.stops.map((stop) =>
+              fetchStopLocationByStopId(stop.id)
+            );
+            const fetchedLocs = await Promise.all(stopPromises);
+            const validStopLocs = fetchedLocs.filter(
+              (loc) => loc && loc.lat !== null && loc.lon !== null
+            ) as StopDetails[];
+            if (validStopLocs.length > 0) {
+              combinedLatLngs = validStopLocs.map((stop) => [
+                stop.lat!,
+                stop.lon!,
+              ]);
+            }
+          }
+
+          if (combinedLatLngs.length > 0) {
+            const bounds = L.latLngBounds(
+              combinedLatLngs as L.LatLngExpression[]
+            );
+            if (bounds.isValid()) {
+              setMapBounds(bounds);
+              setCurrentCenter(bounds.getCenter());
+              setHasFittedToCurrentRoute(true); // Mark as fitted for this route
+            }
+          }
+        };
+        fetchAndSetBounds();
+      }
+    } else if (!resolvedRouteId) {
+      // Reset the flag when the route query is cleared
+      setHasFittedToCurrentRoute(false);
+      setMapBounds(undefined); // Clear bounds
+      // Optionally reset center to default/geolocation if no route is selected
+      // setCurrentCenter(DEFAULT_CENTER);
     }
-  }, [shapeEntries]); // Re-calculate bounds when shapeEntries change
+  }, [
+    resolvedRouteId,
+    selectedTripId,
+    tripsData,
+    hasFittedToCurrentRoute,
+    geoLocationLoaded,
+  ]); // Dependencies: route ID, initial selected trip ID, trips data, and the flag.
 
   // --- Form Submission Handler ---
   const handleSubmit = (e: React.FormEvent) => {
@@ -475,11 +525,13 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
       // The useEffect for tripsData will then re-populate them.
       setSelectedTripId(null);
       setHeadsignSelections([]);
+      setHasFittedToCurrentRoute(false); // Reset map fit flag for new route
     } else {
       setCurrentRouteQuery('');
       setRouteQueryInput('');
       setSelectedTripId(null); // Clear selected trip if query is empty
       setHeadsignSelections([]); // Clear headsigns if query is empty
+      setHasFittedToCurrentRoute(false); // Reset map fit flag if query is empty
     }
   };
 
@@ -488,14 +540,15 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
     const newlySelectedTripId = e.target.value;
     setSelectedTripId(newlySelectedTripId);
     console.log(`User selected headsign for trip_id: ${newlySelectedTripId}`);
+    // Do NOT reset hasFittedToCurrentRoute here, as we don't want to refit the map
   };
 
   // --- Overall Loading State ---
   const anyLoading =
+    routeDetailsLoading || // Added routeDetailsLoading
     tripsLoading ||
-    shapeIdLoading ||
+    selectedTripLoading ||
     shapePointsLoading ||
-    stopTimesLoading ||
     stopLocationsLoading;
 
   // --- Initial Loading & Error States for Geolocation ---
@@ -514,34 +567,60 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
     );
   }
 
-  // --- REVISED: Combine stop times with actual stop locations ---
-  const stopsWithCoords =
-    stopTimesData
-      ?.map((stopTime) => {
-        // UPDATED: Changed stop_id to stopId for consistency with StopTimeEntry interface
+  // --- Specific API Errors ---
+  // Added error for routeDetailsError
+  if (routeDetailsError && !routeDetailsLoading) {
+    return (
+      <div className='h-[500px] w-full flex items-center justify-center bg-red-100 rounded-lg shadow'>
+        <p className='text-red-600'>
+          Error fetching route: {routeDetailsError.message}
+        </p>
+      </div>
+    );
+  }
+
+  // If route details loaded but no routes found for the input
+  if (
+    !routeDetailsLoading &&
+    currentRouteQuery &&
+    (!routeDetailsData || routeDetailsData.length === 0)
+  ) {
+    return (
+      <div className='h-[500px] w-full flex items-center justify-center bg-yellow-100 rounded-lg shadow'>
+        <p className='text-yellow-800'>
+          No routes found for "{currentRouteQuery}".
+        </p>
+      </div>
+    );
+  }
+
+  // --- Combine stop times from selectedTripDetails with actual stop locations ---
+  const stopsWithCoords: StopWithCoords[] =
+    selectedTripDetails?.stops
+      ?.map((tripStop) => {
         const stopLocation = stopLocationsData.find(
-          (loc) => loc.number === stopTime.stopId
+          (loc) => String(loc.id) === tripStop.id
         );
-        if (stopLocation) {
+        if (
+          stopLocation &&
+          stopLocation.lat !== null &&
+          stopLocation.lon !== null
+        ) {
           return {
-            ...stopTime,
+            ...tripStop,
             lat: stopLocation.lat,
             lon: stopLocation.lon,
-            stop_name: stopLocation.name, // Add stop name from location data
+            stop_name: stopLocation.name,
           };
         }
-        console.warn(`No location found for stop ID: ${stopTime.stopId}`); // Changed stop_id to stopId
-        return null; // Filter out stops for which we couldn't find a location
+        console.warn(`No location found for stop ID: ${tripStop.id}`);
+        return null;
       })
-      .filter(
-        (
-          stop
-        ): stop is StopTimeEntry & {
-          lat: number;
-          lon: number;
-          stop_name: string;
-        } => stop !== null
-      ) || [];
+      .filter((stop): stop is StopWithCoords => stop !== null) || [];
+
+  // Prepare polyline positions from shapeEntries
+  const polylinePositions: LatLngExpression[] =
+    shapeEntries?.map((entry) => [entry.lat, entry.lon]) || [];
 
   return (
     <div className='p-4'>
@@ -563,10 +642,9 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
       </form>
 
       {/* Display Route Info if available */}
-      {currentRouteQuery && tripsData?.route && (
+      {currentRouteQuery && routeDetailsData && routeDetailsData.length > 0 && (
         <h2 className='text-xl font-semibold mb-2'>
-          Route: {tripsData.route.route_short_name} -{' '}
-          {tripsData.route.route_long_name}
+          Route: {resolvedRouteName || resolvedRouteId} ({resolvedRouteId})
         </h2>
       )}
 
@@ -609,62 +687,63 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
         </p>
       )}
 
-      {/* Specific API Errors */}
-      {tripsError && !tripsLoading && (
-        <div className='p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg'>
-          Error fetching trips: {tripsError.message}
-        </div>
-      )}
-      {shapeIdError && !shapeIdLoading && selectedTripId && (
-        <div className='p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg'>
-          Error fetching shape identifier for trip {selectedTripId}:{' '}
-          {shapeIdError.message}
-        </div>
-      )}
-      {shapePointsError && !shapePointsLoading && actualShapeIdToFetch && (
-        <div className='p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg'>
-          Error fetching shape coordinates for shape ID {actualShapeIdToFetch}:{' '}
-          {shapePointsError.message}
-        </div>
-      )}
-      {stopTimesError && !stopTimesLoading && selectedTripId && (
-        <div className='p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg'>
-          Error fetching stop times for trip ID {selectedTripId}:{' '}
-          {stopTimesError.message}
-        </div>
-      )}
-      {stopLocationsError &&
-        !stopLocationsLoading &&
-        uniqueStopIds.length > 0 && (
-          <div className='p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg'>
-            Error fetching stop locations for some stops.
-          </div>
+      {/* Specific API Errors (after initial route details check) */}
+      {!routeDetailsError &&
+        !routeDetailsLoading &&
+        routeDetailsData &&
+        routeDetailsData.length > 0 && (
+          <>
+            {tripsError && !tripsLoading && (
+              <div className='p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg'>
+                Error fetching trips: {tripsError.message}
+              </div>
+            )}
+            {selectedTripError && !selectedTripLoading && selectedTripId && (
+              <div className='p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg'>
+                Error fetching details for trip {selectedTripId}:{' '}
+                {selectedTripError.message}
+              </div>
+            )}
+            {shapePointsError &&
+              !shapePointsLoading &&
+              actualShapeIdToFetch && (
+                <div className='p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg'>
+                  Error fetching shape coordinates for shape ID{' '}
+                  {actualShapeIdToFetch}: {shapePointsError.message}
+                </div>
+              )}
+            {stopLocationsError &&
+              !stopLocationsLoading &&
+              uniqueStopIdsInSelectedTrip.length > 0 && (
+                <div className='p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg'>
+                  Error fetching stop locations for some stops.
+                </div>
+              )}
+          </>
         )}
 
       {/* Data states after loading and without errors */}
       {currentRouteQuery &&
         !anyLoading &&
         !tripsError &&
-        !shapeIdError &&
+        !selectedTripError &&
         !shapePointsError &&
-        !stopTimesError &&
-        !stopLocationsError && (
+        !stopLocationsError &&
+        !routeDetailsError && // Also check routeDetailsError here
+        routeDetailsData &&
+        routeDetailsData.length > 0 && ( // Ensure route details were found
           <>
-            {tripsData && tripsData.trip_ids.length === 0 && (
+            {tripsData && tripsData.length === 0 && (
               <p className='text-yellow-600 mb-2'>
                 No trips found for route "{currentRouteQuery}".
               </p>
             )}
-            {tripsData &&
-              tripsData.trip_ids.length > 0 &&
-              (!tripsData.trips_details ||
-                tripsData.trips_details.length === 0) && (
-                <p className='text-yellow-600 mb-2'>
-                  Trips found, but no detailed trip information for route "
-                  {currentRouteQuery}".
-                </p>
-              )}
-            {selectedTripId && shapeIdData && !shapeIdData.shape_id && (
+            {selectedTripId && selectedTripDetails === null && (
+              <p className='text-yellow-600 mb-2'>
+                Trip (ID: "{selectedTripId}") not found or details unavailable.
+              </p>
+            )}
+            {selectedTripDetails && !selectedTripDetails.shape_id && (
               <p className='text-yellow-600 mb-2'>
                 Trip (ID: "{selectedTripId}") found, but it has no associated
                 shape identifier.
@@ -678,18 +757,21 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
                   are available for this shape.
                 </p>
               )}
-            {selectedTripId && stopTimesData && stopTimesData.length === 0 && (
-              <p className='text-yellow-600 mb-2'>
-                No stop times found for trip ID "{selectedTripId}".
-              </p>
-            )}
-            {stopTimesData &&
-              stopTimesData.length > 0 &&
+            {selectedTripDetails &&
+              selectedTripDetails.stops &&
+              selectedTripDetails.stops.length === 0 && (
+                <p className='text-yellow-600 mb-2'>
+                  No stop times found for trip ID "{selectedTripId}".
+                </p>
+              )}
+            {selectedTripDetails &&
+              selectedTripDetails.stops &&
+              selectedTripDetails.stops.length > 0 &&
               stopsWithCoords.length === 0 && (
                 <p className='text-yellow-600 mb-2'>
                   Stop times found, but no corresponding locations could be
-                  fetched. Please check the `busstop-location-data` API or if
-                  `stopId`s are correct. {/* Changed stop_id to stopId */}
+                  fetched. Please check the `/api/v1/stop` API or if `stopId`s
+                  are correct.
                 </p>
               )}
           </>
@@ -707,39 +789,30 @@ export function ShapeMapDisplay({ zoom = 14 }: ShapeMapDisplayProps) {
         />
         <MapViewUpdater center={currentCenter} bounds={mapBounds} />
 
-        {shapeEntries && shapeEntries.length > 1 && (
+        {/* Polyline for the route shape */}
+        {polylinePositions.length > 1 && (
           <Polyline
-            positions={shapeEntries.map(
-              (entry) =>
-                [entry.shape_pt_lat, entry.shape_pt_lon] as [number, number]
-            )}
+            positions={polylinePositions}
             color='purple'
             weight={5}
             opacity={0.8}
           />
         )}
 
-        {/* Render Markers for Stop Times with actual locations */}
+        {/* Markers for Stops with Coordinates */}
         {stopsWithCoords.map((stop, index) => (
           <Marker
-            key={`stop-${stop.stopId}-${index}`}
+            key={`stop-${stop.id}-${index}`} // Use stop.id for unique key
             position={[stop.lat, stop.lon]}
+            title={stop.stop_name || `Stop ID: ${stop.id}`}
           >
             <Popup>
               <div>
                 <strong>Stop Name:</strong> {stop.stop_name || 'N/A'} <br />
-                <strong>Stop ID:</strong> {stop.stopId} <br />{' '}
-                {/* Changed stop_id to stopId */}
-                <strong>Sequence:</strong> {stop.stopSequence} <br />{' '}
-                {/* Changed stop_sequence to stopSequence */}
-                <strong>Arrival:</strong> {stop.arrivalTime} <br />{' '}
-                {/* Changed arrival_time to arrivalTime */}
-                <strong>Departure:</strong> {stop.departureTime} <br />{' '}
-                {/* Changed departure_time to departureTime */}
-                <strong>Pickup Type:</strong> {stop.pickupType} <br />{' '}
-                {/* Changed pickup_type to pickupType */}
-                <strong>Drop-off Type:</strong> {stop.dropOffType}{' '}
-                {/* Changed drop_off_type to dropOffType */}
+                <strong>Stop ID:</strong> {stop.id} <br />
+                <strong>Sequence:</strong> {stop.stopSequence} <br />
+                <strong>Arrival:</strong> {stop.arrivalTime} <br />
+                {/* Departure, Pickup, Drop-off types are on TripStop, but not used in popup */}
               </div>
             </Popup>
           </Marker>

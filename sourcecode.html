@@ -1,0 +1,784 @@
+<!DOCTYPE html PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.0//EN" "http://www.wapforum.org/DTD/xhtml-mobile10.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <title>Fleet Service Search Results</title>
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css"
+    />
+    <script src="/js/RealtimeFleetTrip.js" type="text/javascript"></script>
+    <link
+      href="../App_Themes/TP_Mobi/mobiweb.css"
+      type="text/css"
+      rel="stylesheet"
+    />
+    <script
+      type="text/javascript"
+      src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"
+    ></script>
+    <script type="text/javascript" src="/Js/jquery.transperth.js"></script>
+    <script
+      type="text/javascript"
+      src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"
+    ></script>
+    <script type="text/javascript" src="/Js/mobiweb.js"></script>
+    <!-- Google Tag Manager -->
+    <script>
+      (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l != 'dataLayer' ? '&l=' + l : '';
+        j.async = true;
+        j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, 'script', 'dataLayer', 'GTM-TKWK5B6');
+    </script>
+    <!-- End Google Tag Manager -->
+  </head>
+  <body>
+    <form
+      name="form1"
+      method="post"
+      action="./RealTimeFleetTrip.aspx?nq=true&amp;fleet=2615"
+      id="form1"
+    >
+      <div>
+        <input
+          type="hidden"
+          name="__VIEWSTATE"
+          id="__VIEWSTATE"
+          value="/wEPaA8FDzhkZGEyMDE2MmY3ZTFiM2RreZlbeiONSoinsdLDimp4qBfvyQ=="
+        />
+      </div>
+
+      <div>
+        <input
+          type="hidden"
+          name="__VIEWSTATEGENERATOR"
+          id="__VIEWSTATEGENERATOR"
+          value="1189AFEE"
+        />
+      </div>
+      <div id="pnlDisplay" class="mainwrap" style="width: 290px">
+        <div class="tpm_menu">
+          <a
+            id="pageHeader_hypBack"
+            title="Back"
+            href="/RealTime/RealTimeStopResults.aspx?SN=16998"
+            ><img
+              title="Back"
+              src="../App_Themes/TP_Mobi/back.gif"
+              alt="Back"
+              style="border-width: 0px"
+          /></a>
+          <a href="/Default.aspx" accesskey="0"
+            ><img
+              id="tpLogo"
+              src="/App_Themes/TP_Mobi/home.gif"
+              alt="Transperth Logo"
+          /></a>
+        </div>
+
+        <div class="tpm_row_heading_black">
+          <span id="lblTripHeading" class="tpm_row_heading_trip_route"
+            >Route 584</span
+          >
+          <span id="lblTripHeading2" class="tpm_row_heading_trip_fleet">
+            with bus 2615</span
+          >
+          <div
+            id="loadingDiv"
+            class="refresh-btn"
+            style="float: right"
+            aria-hidden="true"
+          >
+            <img class="refresh-icon" src="/App_Themes/TP_Mobi/refresh.svg" />
+          </div>
+        </div>
+        <div class="tpm_row_white info">
+          *Times are live unless otherwise specified
+        </div>
+        <div id="lnkTripInterruption">
+          <a
+            id="interruption_link"
+            href="#"
+            name="interruption_link"
+            title="More information on interruption"
+            class="interruption-link"
+            ><i class="icon-alert" aria-hidden="true"></i>Service Alert</a
+          >
+        </div>
+        <div class="tpm_row" style="display: none">
+          <h1 style="margin: 0; font-weight: normal">
+            <span id="lblTripSummary"></span>
+          </h1>
+        </div>
+        <div class="tpm_fleettrip_content_wrap">
+          <div class="tpm_content" id="pnlFleetTrip">
+            <div class="fleet-trip-detail" id="clientSideRenderList">
+              <span
+                id="msgFindingFleetTrip"
+                class="tpm_textalert"
+                style="display: none"
+              ></span>
+              <div id="pnlFleetTripStops"></div>
+            </div>
+            <div class="fleet-trip-detail BUS" id="serverSideRenderList">
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Mandurah Bus Stn Stand 2</span
+                    >
+                    <span class="service-stop-number">Stop 17382</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">5:59pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Allnutt St Before Dower St</span
+                    >
+                    <span class="service-stop-number">Stop 24262</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:00pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Allnutt St After Park Rd</span
+                    >
+                    <span class="service-stop-number">Stop 26294</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:01pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Scott St Before Anstruther Rd</span
+                    >
+                    <span class="service-stop-number">Stop 21553</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:01pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Peel St After Randell St</span
+                    >
+                    <span class="service-stop-number">Stop 26295</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:02pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Peel St Before Sutton St</span
+                    >
+                    <span class="service-stop-number">Stop 26296</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:03pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Peel St Before Mandurah Tce</span
+                    >
+                    <span class="service-stop-number">Stop 28893</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:04pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Dolphin Dr Before Breakwater Pde</span
+                    >
+                    <span class="service-stop-number">Stop 26309</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:05pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Mandurah Tce After Peel St</span
+                    >
+                    <span class="service-stop-number">Stop 17706</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:07pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Mandurah Tce Before Andrew St</span
+                    >
+                    <span class="service-stop-number">Stop 17707</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:08pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Mandurah Tce Before Anstruther Rd</span
+                    >
+                    <span class="service-stop-number">Stop 17708</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:09pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Mandurah Tce After Adonis Rd</span
+                    >
+                    <span class="service-stop-number">Stop 17709</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:10pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Mandurah Tce After Tindale St</span
+                    >
+                    <span class="service-stop-number">Stop 17710</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:11pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Gordon Rd After Shepherd Rd</span
+                    >
+                    <span class="service-stop-number">Stop 26756</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:11pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Mandurah Rd After Watersun Dr</span
+                    >
+                    <span class="service-stop-number">Stop 17018</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:14pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Departed">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Mandurah Rd Before Meadow Springs Dr</span
+                    >
+                    <span class="service-stop-number">Stop 17020</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:14pm</span><br />
+                    <span class="service-status-flag">(Departed)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Mandurah Rd After Ronsard Dr</span
+                    >
+                    <span class="service-stop-number">Stop 17021</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:15pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Karinga Rd After Hestia Wy</span
+                    >
+                    <span class="service-stop-number">Stop 24268</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:16pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Guillardon Tce After Eliza Pass</span
+                    >
+                    <span class="service-stop-number">Stop 24269</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:16pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Guillardon Tce Before Lord Hobart Dr</span
+                    >
+                    <span class="service-stop-number">Stop 24271</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:17pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Challenger Rd After George Hibbert Rd</span
+                    >
+                    <span class="service-stop-number">Stop 25809</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:18pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Challenger Rd Before Tranby St</span
+                    >
+                    <span class="service-stop-number">Stop 25808</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:19pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Challenger Rd Before Albion Rd</span
+                    >
+                    <span class="service-stop-number">Stop 25806</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:20pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Challenger Rd Before Madora Beach Rd</span
+                    >
+                    <span class="service-stop-number">Stop 21443</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:20pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Madora Beach Rd Before Angalore Rd</span
+                    >
+                    <span class="service-stop-number">Stop 28784</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:21pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Madora Beach Rd After Huntington St</span
+                    >
+                    <span class="service-stop-number">Stop 28785</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:22pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Banksiadale Gte After Mandurah Rd</span
+                    >
+                    <span class="service-stop-number">Stop 28787</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:23pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Banksiadale Gte Before Loretta Pky</span
+                    >
+                    <span class="service-stop-number">Stop 27781</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:24pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name"
+                      >Yindana Bvd After Rayner Prom</span
+                    >
+                    <span class="service-stop-number">Stop 27779</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:24pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+
+              <div class="tpm_row_fleettrip_wrap Predicted">
+                <div class="circle-icon"></div>
+                <div class="sonar-wave"></div>
+                <div class="tpm_row_fleettrip_QR">
+                  <div class="tpm_row_fleettrip_stop">
+                    <span class="service-stop-name">Lakelands Stn Stand 4</span>
+                    <span class="service-stop-number">Stop 28792</span>
+                  </div>
+                  <div class="tpm_row_fleettrip_status">
+                    <span class="dot-icon-live"></span
+                    ><span class="service-time">6:25pm</span><br />
+                    <span class="service-status-flag">(Predicted)</span>
+                  </div>
+                  <br style="clear: left" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="tpm_help">
+          <a class="tpm_row_heading" href="#">
+            <!-- Arrow image - uses jQuery to do image flip using single image -->
+            <div class="arrow"></div>
+
+            Help
+          </a>
+          <div class="tpm_row_content">
+            <!-- NUMBERED HELP _ try and use an ordered list for ALL help menus. Increases cohesion -->
+            <ol>
+              <li>
+                <span id="lblHelpText"></span>
+              </li>
+              <li>Click on a result to view further route information.</li>
+              <li>Click on ‘Back’ to return to results.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="tpm_footer">
+          <a id="Footer_hypDisclaimer" href="../Corporate/Disclaimer.aspx"
+            >Disclaimer</a
+          >
+          <a id="Footer_hpPrivacy" href="../Corporate/Privacy.aspx">Privacy</a>
+          <a id="Footer_hypTerms" href="../Corporate/Terms.aspx">Terms</a>
+          <span class="copyright">&copy; 2012</span>
+          <span class="copyright"
+            ><a href="http://www.transperth.wa.gov.au?mobileversion=false"
+              >Transperth Website</a
+            ></span
+          >
+        </div>
+      </div>
+      <div
+        class="modal fade"
+        id="tripAdditionInfoPopup"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="popupTitle"
+        aria-describedby="popupDetail"
+        aria-modal="true"
+      >
+        <div class="modal-dialog modal-sm" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
+              <h4
+                id="popupTitle"
+                class="modal-title modal-title-interruption"
+              ></h4>
+            </div>
+            <div class="modal-body">
+              <div id="popupDetail"></div>
+            </div>
+            <div class="modal-footer"></div>
+          </div>
+        </div>
+      </div>
+      <script type="text/javascript">
+        var rtf = {};
+        $(document).ready(function () {
+          rtf = new RealTimeFleet('2615', '5347638', 10000);
+          rtf.init();
+        });
+      </script>
+
+      <!-- Google Tag Manager (noscript) -->
+      <noscript
+        ><iframe
+          src="https://www.googletagmanager.com/ns.html?id=GTM-TKWK5B6"
+          height="0"
+          width="0"
+          style="display: none; visibility: hidden"
+        ></iframe
+      ></noscript>
+      <!-- End Google Tag Manager(noscript)-->
+    </form>
+  </body>
+</html>
