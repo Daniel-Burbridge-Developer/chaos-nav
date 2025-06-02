@@ -109,15 +109,15 @@ export const APIRoute = createAPIFileRoute(
       // We'll use SQL `lower()` function for case-insensitive exact comparison.
       const matchingRoutes = await db
         .select({
-          route_id: routes.route_id,
-          route_short_name: routes.route_short_name,
-          route_long_name: routes.route_long_name,
+          route_id: routes.id,
+          route_short_name: routes.short_name,
+          route_long_name: routes.long_name,
         })
         .from(routes)
         .where(
           or(
-            eq(sql`lower(${routes.route_short_name})`, lowercasedQuery),
-            eq(sql`lower(${routes.route_long_name})`, lowercasedQuery)
+            eq(sql`lower(${routes.short_name})`, lowercasedQuery),
+            eq(sql`lower(${routes.long_name})`, lowercasedQuery)
           )
         );
 
@@ -136,7 +136,7 @@ export const APIRoute = createAPIFileRoute(
       // Fetch trips associated with the found route_ids
       const associatedTrips = await db
         .select({
-          trip_id: trips.trip_id,
+          trip_id: trips.id,
           route_id: trips.route_id,
           trip_headsign: trips.trip_headsign,
         })

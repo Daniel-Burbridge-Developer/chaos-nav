@@ -2,7 +2,6 @@
 import { json } from '@tanstack/react-start';
 import { createAPIFileRoute } from '@tanstack/react-start/api';
 import { db } from '~/db/db'; // Your Drizzle DB instance
-import { stopTimes } from '~/db/schema/stop_times'; // Import your stopTimes schema
 import { eq } from 'drizzle-orm'; // Import 'eq' for comparisons
 
 // Define the type for a single stop_time entry as it comes from your Drizzle query.
