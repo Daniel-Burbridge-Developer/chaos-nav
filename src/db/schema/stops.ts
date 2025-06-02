@@ -1,28 +1,24 @@
 import {
-  sqliteTable,
+  pgTable,
   integer,
   text,
   index,
   real,
-} from "drizzle-orm/sqlite-core";
+  jsonb, // Import jsonb
+} from 'drizzle-orm/pg-core';
 
-export const stops = sqliteTable(
-  "stops",
+export const stops = pgTable(
+  'stops',
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    name: text("name").notNull(),
-    number: text("number").notNull(),
-    // New columns added below
-    lat: real("lat"), // Use 'real' for floating-point numbers
-    lon: real("lon"), // Use 'real' for floating-point numbers
-    zone_id: integer("zone_id"), // Use 'integer' for zone_id
+    id: integer('number').notNull().primaryKey(),
+    name: text('name').notNull(),
+    lat: real('lat'),
+    lon: real('lon'),
+    zone_id: text('zone_id'),
+    // Change supported_modes to jsonb to store an array of strings
+    supported_modes: jsonb('supported_modes').$type<string[]>(),
   },
-  (stops) => [
-    // Existing index on number
-    index("number_idx").on(stops.number),
-    // Add a new index on name
-    index("name_idx").on(stops.name),
-  ]
+  (stops) => [index('name_idx').on(stops.name)]
 );
 
 export type Stop = typeof stops.$inferSelect;

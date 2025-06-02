@@ -6,10 +6,9 @@ config({ path: '.env' }); // Load environment variables from .env file
 export default defineConfig({
   out: './drizzle',
   schema: './src/db/schema',
-  dialect: 'turso',
+  dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.TURSO_DATABASE_URL!,
-    authToken: process.env.TURSO_AUTH_TOKEN!,
+    url: process.env.DATABASE_URL!,
   },
   verbose: true,
 });

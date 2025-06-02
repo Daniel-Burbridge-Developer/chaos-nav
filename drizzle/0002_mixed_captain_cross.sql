@@ -1,0 +1,1 @@
+ALTER TABLE "stops" ALTER COLUMN "zone_id" SET DATA TYPE text;

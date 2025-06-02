@@ -1,6 +1,6 @@
 {
-  "id": "f2468a4f-cb4f-42e5-8006-6666716b164d",
-  "prevId": "a5fbc50b-78c2-4ade-aac2-15103a12499d",
+  "id": "ef0ca2d7-184b-44b1-944e-bb8802854470",
+  "prevId": "74e9ca64-9d78-4bf9-beba-aef11aecdc0a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -119,31 +119,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.stop_times": {
-      "name": "stop_times",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "stops": {
-          "name": "stops",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.stops": {
       "name": "stops",
       "schema": "",
@@ -213,8 +188,8 @@
       "name": "trips",
       "schema": "",
       "columns": {
-        "trip_id": {
-          "name": "trip_id",
+        "id": {
+          "name": "id",
           "type": "text",
           "primaryKey": true,
           "notNull": true
@@ -246,6 +221,12 @@
         "shape_id": {
           "name": "shape_id",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stops": {
+          "name": "stops",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         }
