@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Search, MapPin, Clock, Filter } from "lucide-react";
-import { useQuery } from "@tanstack/react-query"; // Import useQuery
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -32,9 +32,7 @@ export function RouteSearch({
     onSearchChange(searchTerm);
   }, [searchTerm, onSearchChange]);
 
-  // Define the query function for fetching routes
   const fetchRoutes = async (query: string): Promise<BusRoute[]> => {
-    // Only fetch if query is not empty or just whitespace
     if (!query.trim()) {
       return [];
     }
@@ -56,34 +54,36 @@ export function RouteSearch({
 
     const data = await response.json();
 
-    // Ensure data.routes is an array
     if (Array.isArray(data.routes)) {
       return data.routes;
     } else {
       console.warn("API response 'routes' field is not an array:", data.routes);
-      return []; // Default to empty array if unexpected data format
+      return [];
     }
   };
 
-  // Use Tanstack Query to manage route fetching
   const {
-    data: routes = [], // Destructure data and provide a default empty array
+    data: fetchedRoutes, // Renamed to avoid confusion with `routes` below
     isLoading,
-    isFetching, // isFetching indicates background fetching (e.g., refetching on window focus)
+    isFetching,
     error,
   } = useQuery<BusRoute[], Error>({
-    // Query key changes when debouncedSearchTerm changes, triggering a refetch
     queryKey: ["routes", debouncedSearchTerm],
     queryFn: () => fetchRoutes(debouncedSearchTerm),
-    // Only enable the query if debouncedSearchTerm is not empty or just whitespace
     enabled: !!debouncedSearchTerm.trim(),
-    staleTime: 1000 * 60 * 50, // Data is considered fresh for 5 minutes
-    // You can add other options here, e.g., retry, retryDelay, refetchOnWindowFocus etc.
+    staleTime: 1000 * 60 * 5,
+    // Add `placeholderData` for SSR, or `initialData` if you prefetch on the server
+    // For simple SSR, `placeholderData: []` can prevent errors if `data` is undefined initially.
+    // However, the real fix is usually in how `displayRoutes` is calculated.
+    // placeholderData: keepPreviousData, // Consider this if you want to show old data while fetching new
   });
 
-  // displayRoutes is now directly derived from `routes` (which is `data` from useQuery)
-  // and will always be an array due to the `routes = []` default in destructuring
-  const displayRoutes = searchTerm ? routes : [];
+  // CRITICAL FIX: Ensure 'routes' used for display is always an array
+  // Use a nullish coalescing operator (?? []) to guarantee 'fetchedRoutes' is an array
+  // before considering 'searchTerm'.
+  const routesForDisplay = fetchedRoutes ?? []; // Ensures routesForDisplay is always an array
+
+  const displayRoutes = searchTerm ? routesForDisplay : [];
 
   return (
     <div className="space-y-4">
@@ -96,7 +96,6 @@ export function RouteSearch({
           onChange={(e) => updateSearchTerm(e.target.value)}
           className="pl-10"
         />
-        {/* Use isFetching for the spinner, as isLoading is only true on first fetch */}
         {(isSearching || isFetching) && (
           <div className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -119,9 +118,6 @@ export function RouteSearch({
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-2 pt-2">
-          {/* These buttons still need logic to apply filters.
-              With Tanstack Query, you might add filter parameters
-              to the `queryKey` and adjust `fetchRoutes` to use them. */}
           <Button variant="outline" size="sm" className="w-full justify-start">
             Active Routes Only
           </Button>
@@ -137,11 +133,11 @@ export function RouteSearch({
       <div className="space-y-2">
         {error && (
           <div className="text-center text-sm text-red-600 py-4 bg-red-50 rounded-lg">
-            {error.message} {/* Display error message from the caught error */}
+            {error.message}
           </div>
         )}
 
-        {/* Show count only if there are routes AND a search term AND not currently fetching data */}
+        {/* Note: displayRoutes.length will be 0 if searchTerm is empty, which is intended */}
         {displayRoutes.length > 0 && searchTerm && !isFetching && (
           <div className="text-sm text-muted-foreground">
             {`${displayRoutes.length} route${
@@ -151,8 +147,10 @@ export function RouteSearch({
         )}
 
         {/* Render routes if available */}
+        {/* The map should always be on an array, as displayRoutes is now guaranteed to be one */}
         {displayRoutes.length > 0
-          ? displayRoutes?.map((route) => (
+          ? // No need for optional chaining here anymore because displayRoutes is guaranteed to be an array
+            displayRoutes.map((route) => (
               <Card
                 key={route.id}
                 className="cursor-pointer transition-colors hover:bg-accent"
@@ -193,8 +191,7 @@ export function RouteSearch({
                 </CardContent>
               </Card>
             ))
-          : // Show "No routes found" message only when search term is present, not fetching, and no error
-            searchTerm &&
+          : searchTerm &&
             !isFetching &&
             !error && (
               <div className="text-center text-sm text-muted-foreground py-4">

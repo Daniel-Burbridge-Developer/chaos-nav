@@ -1,5 +1,10 @@
-import { useState } from "react";
+// src/components/route-search.tsx
+
+"use client"; // Still essential for client-side hooks
+
+import { useState, useEffect, useMemo } from "react";
 import { Search, MapPin, Clock, Filter } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -11,75 +16,120 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
 import { useDebouncedSearch } from "../hooks/use-debounced-search";
-// Import both types
-import type { BusRoute, SearchedBusRoute } from "types/bus-routes";
-import { useQuery } from "@tanstack/react-query";
+import type { BusRoute } from "types/bus-routes";
 
 interface RouteSearchProps {
-  // onRouteSelect likely expects the full BusRoute if you select it
-  // You might need to fetch the full route details after selection
   onRouteSelect: (route: BusRoute) => void;
-  selectedRoute?: BusRoute | null;
+  onSearchChange: (query: string) => void;
 }
-
-// Data fetching function for Tanstack Query
-// This now explicitly returns SearchedBusRoute[]
-const fetchRoutes = async (query: string): Promise<SearchedBusRoute[]> => {
-  if (!query) return [];
-  const response = await fetch(`/api/v1/routes/${encodeURIComponent(query)}`);
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  const contentType = response.headers.get("content-type");
-  if (!contentType || !contentType.includes("application/json")) {
-    throw new Error("Response is not JSON");
-  }
-
-  const data = await response.json();
-  // The API returns an array directly, not an object with a 'routes' property
-  return data || [];
-};
 
 export function RouteSearch({
   onRouteSelect,
-  selectedRoute,
+  onSearchChange,
 }: RouteSearchProps) {
-  const { searchTerm, debouncedSearchTerm, updateSearchTerm } =
-    useDebouncedSearch(300);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const { searchTerm, debouncedSearchTerm, isSearching, updateSearchTerm } =
+    useDebouncedSearch(300);
 
-  // Use Tanstack Query for data fetching
-  // Specify SearchedBusRoute[] as the data type
+  // --- NEW: Client-side mount flag ---
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true); // This runs only on the client after hydration
+  }, []);
+  // --- END NEW ---
+
+  // Notify parent of search changes (this is fine on both client/server for initial values)
+  useEffect(() => {
+    onSearchChange(searchTerm);
+  }, [searchTerm, onSearchChange]);
+
+  const fetchRoutes = async (query: string): Promise<BusRoute[]> => {
+    if (!query.trim()) {
+      return [];
+    }
+
+    const response = await fetch(
+      `/api/v1/routes?q=${encodeURIComponent(query)}`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch routes: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Received non-JSON response from API.");
+    }
+
+    const data = await response.json();
+
+    if (Array.isArray(data.routes)) {
+      return data.routes;
+    } else {
+      console.warn("API response 'routes' field is not an array:", data.routes);
+      return [];
+    }
+  };
+
   const {
-    data: searchedRoutes = [], // Rename to avoid confusion with the full BusRoute
+    data: fetchedRoutes,
     isLoading,
-    isError,
+    isFetching,
     error,
-  } = useQuery<SearchedBusRoute[], Error>({
+  } = useQuery<BusRoute[], Error>({
     queryKey: ["routes", debouncedSearchTerm],
     queryFn: () => fetchRoutes(debouncedSearchTerm),
-    enabled: !!debouncedSearchTerm,
+    // --- MODIFIED: Query is only enabled on client after mount ---
+    enabled: !!debouncedSearchTerm.trim() && hasMounted,
+    // --- END MODIFIED ---
     staleTime: 1000 * 60 * 5,
-    retry: 1,
   });
 
-  const displayRoutes = searchTerm
-    ? searchedRoutes.map((route) => ({
-        id: route.id,
-        // Assuming you want to display the 'name' from search results
-        // You might need to adjust the UI to only show 'name' when searching
-        routeName: route.name || "N/A",
-        routeNumber: "", // Not available from search API
-        origin: "", // Not available from search API
-        destination: "", // Not available from search API
-        stops: [], // Not available from search API
-        color: "#000000", // Default or placeholder
-        isActive: false, // Not available from search API
-        // ... provide defaults for other BusRoute properties not in SearchedBusRoute
-      }))
-    : {};
+  // Ensure fetchedRoutes is always an array
+  const safeFetchedRoutes = fetchedRoutes ?? [];
+
+  // displayRoutes correctly based on searchTerm and the guaranteed array
+  const displayRoutes = searchTerm ? safeFetchedRoutes : [];
+
+  // --- BEGIN CRITICAL DEBUGGING (Keep these for now!) ---
+  console.log("--- RouteSearch Render Debug (SERVER/CLIENT) ---");
+  console.log("Current searchTerm:", searchTerm, "Type:", typeof searchTerm);
+  console.log(
+    "Current debouncedSearchTerm:",
+    debouncedSearchTerm,
+    "Type:",
+    typeof debouncedSearchTerm
+  );
+  console.log("hasMounted:", hasMounted, "Type:", typeof hasMounted);
+  console.log(
+    "fetchedRoutes (from useQuery.data):",
+    fetchedRoutes,
+    "Type:",
+    typeof fetchedRoutes,
+    "IsArray:",
+    Array.isArray(fetchedRoutes)
+  );
+  console.log(
+    "safeFetchedRoutes (after ?? []):",
+    safeFetchedRoutes,
+    "Type:",
+    typeof safeFetchedRoutes,
+    "IsArray:",
+    Array.isArray(safeFetchedRoutes)
+  );
+  console.log(
+    "displayRoutes (BEFORE MAP):",
+    displayRoutes,
+    "Type:",
+    typeof displayRoutes,
+    "IsArray:",
+    Array.isArray(displayRoutes)
+  );
+  console.log("-----------------------------------------");
+  // --- END CRITICAL DEBUGGING ---
 
   return (
     <div className="space-y-4">
@@ -92,14 +142,15 @@ export function RouteSearch({
           onChange={(e) => updateSearchTerm(e.target.value)}
           className="pl-10"
         />
-        {isLoading && (
+        {/* isFetching should be false on server due to enabled:false. Only true on client. */}
+        {(isSearching || isFetching) && (
           <div className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         )}
       </div>
 
-      {/* Filters */}
+      {/* Filters (render always, but filter logic would need client-side data) */}
       <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
         <CollapsibleTrigger asChild>
           <Button
@@ -125,97 +176,84 @@ export function RouteSearch({
 
       <Separator />
 
-      {/* Search Results */}
+      {/* Search Results: ONLY RENDER IF HAS MOUNTED ON CLIENT */}
       <div className="space-y-2">
-        {isError && (
+        {error && (
           <div className="text-center text-sm text-red-600 py-4 bg-red-50 rounded-lg">
-            Failed to search routes. Please try again. {error?.message}
+            {error.message}
           </div>
         )}
 
-        {/* Use searchedRoutes for length check when searching */}
-        {searchTerm
-          ? searchedRoutes.length > 0 && (
+        {/* Conditionally render the entire search results section */}
+        {hasMounted ? (
+          <>
+            {displayRoutes.length > 0 && searchTerm && !isFetching && (
               <div className="text-sm text-muted-foreground">
-                <span className="math-inline">
-                  {searchedRoutes.length} route
-                </span>
-                {searchedRoutes.length !== 1 ? "s" : ""} found
+                {`${displayRoutes.length} route${
+                  displayRoutes.length !== 1 ? "s" : ""
+                } found`}
               </div>
-            )
-          : ""}
-        {(displayRoutes as (BusRoute | SearchedBusRoute)[]).map((route) => (
-          <Card
-            key={route.id}
-            className={`cursor-pointer transition-colors hover:bg-accent ${
-              selectedRoute?.id === route.id ? "ring-2 ring-primary" : ""
-            }`}
-            // If you select a searched route, you might need to fetch its full BusRoute details
-            onClick={() => onRouteSelect(route as BusRoute)} // Cast if you assume this is always a full BusRoute after selection
-          >
-            <CardContent className="p-3">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    {/* Conditional rendering based on type or use a common property */}
-                    {"routeNumber" in route ? ( // Check if it's a full BusRoute
-                      <Badge
-                        variant="secondary"
-                        style={{
-                          backgroundColor: (route as BusRoute).color + "20",
-                          color: (route as BusRoute).color,
-                        }}
-                      >
-                        {(route as BusRoute).routeNumber}
-                      </Badge>
-                    ) : null}
-                    {/* If it's a SearchedBusRoute, display its name or handle differently */}
-                    {searchTerm && "name" in route ? (
-                      <Badge variant="secondary">
-                        {(route as SearchedBusRoute).name || "N/A"}
-                      </Badge>
-                    ) : null}
+            )}
 
-                    {"isActive" in route && (route as BusRoute).isActive && (
-                      <Badge variant="outline" className="text-xs">
-                        Active
-                      </Badge>
-                    )}
+            {Array.isArray(displayRoutes) && displayRoutes.length > 0
+              ? displayRoutes.map((route) => (
+                  <Card
+                    key={route.id}
+                    className="cursor-pointer transition-colors hover:bg-accent"
+                    onClick={() => onRouteSelect(route)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant="secondary"
+                              style={{
+                                backgroundColor: route.color + "20",
+                                color: route.color,
+                              }}
+                            >
+                              {route.routeNumber}
+                            </Badge>
+                            {route.isActive && (
+                              <Badge variant="outline" className="text-xs">
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                          <h4 className="font-medium text-sm">
+                            {route.routeName}
+                          </h4>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3" />
+                            <span>
+                              {route.origin} → {route.destination}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            <span>{route.stops.length} stops</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              : searchTerm &&
+                !isFetching &&
+                !error && (
+                  <div className="text-center text-sm text-muted-foreground py-4">
+                    No routes found for "{searchTerm}"
                   </div>
-                  <h4 className="font-medium text-sm">
-                    {"routeName" in route
-                      ? (route as BusRoute).routeName
-                      : (route as SearchedBusRoute).name}
-                  </h4>
-                  {"origin" in route && "destination" in route && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      <span>
-                        {(route as BusRoute).origin} →{" "}
-                        {(route as BusRoute).destination}
-                      </span>
-                    </div>
-                  )}
-                  {"stops" in route && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>{(route as BusRoute).stops.length} stops</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {searchTerm &&
-          !isLoading &&
-          !isError &&
-          searchedRoutes.length === 0 && (
-            <div className="text-center text-sm text-muted-foreground py-4">
-              No routes found for "{searchTerm}"
-            </div>
-          )}
+                )}
+          </>
+        ) : (
+          // This will be rendered on the server, before client-side hydration
+          // You can show a loading message or just null
+          <div className="text-center text-sm text-muted-foreground py-4">
+            Loading search component...
+          </div>
+        )}
       </div>
     </div>
   );
