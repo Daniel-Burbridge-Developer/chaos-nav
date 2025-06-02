@@ -10,3 +10,5 @@ Hobby Project, experimenting with transperth!
 - [ ] Display correct Icon for bus/train/etc
 
 - [ ] Clean Code up.
+
+There was an idea of featured routes - i prefer favorites to auto display

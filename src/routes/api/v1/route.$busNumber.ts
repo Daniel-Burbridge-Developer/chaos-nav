@@ -1,6 +1,7 @@
+// route.$busNumber.ts
 import { db } from "~/db/db"; // Your Drizzle DB instance
 import { schema } from "~/db/schema/index"; // Updated: Assuming 'routes' schema is exported from here
-import { ilike, or } from "drizzle-orm";
+import { eq, or } from "drizzle-orm"; // Changed ilike to eq
 import { json } from "@tanstack/react-start";
 import { createAPIFileRoute } from "@tanstack/react-start/api";
 
@@ -95,7 +96,7 @@ function handleServerError(error: unknown, apiName: string) {
  *
  * The `GET` function handles GET requests and includes in-memory caching for search results.
  */
-export const APIRoute = createAPIFileRoute("/api/v1/routes/$busNumber")({
+export const APIRoute = createAPIFileRoute("/api/v1/route/$busNumber")({
   // Handle OPTIONS requests for CORS preflight
   OPTIONS: async ({ request }) => {
     const origin = request.headers.get("Origin");
@@ -169,8 +170,8 @@ export const APIRoute = createAPIFileRoute("/api/v1/routes/$busNumber")({
         .from(schema.routes)
         .where(
           or(
-            ilike(schema.routes.short_name, `%${searchBusNumber}%`),
-            ilike(schema.routes.long_name, `%${searchBusNumber}%`)
+            eq(schema.routes.short_name, searchBusNumber), // Changed to eq for exact match
+            eq(schema.routes.long_name, searchBusNumber) // Changed to eq for exact match
           )
         )
         .limit(5);
