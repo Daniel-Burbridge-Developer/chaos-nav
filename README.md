@@ -2,7 +2,7 @@
 
 Hobby Project, experimenting with transperth!
 
-- [ ] Show Markers for bus stops
+- [x] Show Markers for bus stops
 - [ ] Display any active (live) busses
 - [ ] Select bus to get live tracking
 - [ ] Search for Green Cats, etc
