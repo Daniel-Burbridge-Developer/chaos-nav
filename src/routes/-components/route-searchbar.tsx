@@ -15,6 +15,7 @@ import { Search, MapPin, Clock, Filter } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Route } from "~/db/schema/routes";
 import { useDebouncedSearch } from "~/hooks/use-debounced-search";
+import { useEffect, useState } from "react";
 
 const fetchRoutes = async (query: string): Promise<Route[]> => {
   if (!query.trim()) {
@@ -44,16 +45,22 @@ const fetchRoutes = async (query: string): Promise<Route[]> => {
   }
 };
 
-const useBusRoutes = (queryTerm: string) => {
+const useBusRoutes = (queryTerm: string, mounted: boolean) => {
   return useQuery({
     queryKey: ["routes", queryTerm],
     queryFn: () => fetchRoutes(queryTerm),
-    enabled: !!queryTerm.trim(),
+    enabled: !!queryTerm.trim() && mounted,
     staleTime: 1000 * 60 * 500,
   });
 };
 
 const RouteSearch = () => {
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   const { searchTerm, debouncedSearchTerm, isSearching, updateSearchTerm } =
     useDebouncedSearch(300);
   const {
@@ -61,12 +68,12 @@ const RouteSearch = () => {
     isLoading,
     isFetching,
     error,
-  } = useBusRoutes(debouncedSearchTerm);
+  } = useBusRoutes(debouncedSearchTerm, hasMounted);
 
   const safeFetchedRoutes = fetchedRoutes ?? [];
   const displayRoutes = searchTerm ? safeFetchedRoutes : [];
 
-  return (
+  return hasMounted ? (
     <div className="space-y-4">
       {/* Search Input */}
       <div className="relative">
@@ -141,7 +148,7 @@ const RouteSearch = () => {
               //               </Badge>
               //             )}
               //           </div>
-              //           <h4 className="font-medium text-sm">{route.routeName}</h4>
+              //           <h4 className="font-medium   text-sm">{route.routeName}</h4>
               //           <div className="flex items-center gap-1 text-xs text-muted-foreground">
               //             <MapPin className="h-3 w-3" />
               //             <span>
@@ -166,6 +173,8 @@ const RouteSearch = () => {
             )}
       </div>
     </div>
+  ) : (
+    <div>Loading...</div>
   );
 };
 
