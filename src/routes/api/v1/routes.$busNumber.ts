@@ -26,7 +26,7 @@ const ALLOWED_ORIGINS = [
 // Define the structure of a single route result object
 interface RouteResult {
   id: string;
-  name: string | null; // Can be short_name or long_name, or null if neither exists
+  short_name: string | null; // Can be short_name or long_name, or null if neither exists
 }
 
 // In-memory cache for route search results.
@@ -178,7 +178,7 @@ export const APIRoute = createAPIFileRoute("/api/v1/routes/$busNumber")({
       // Map the results to the desired { id, name } object structure
       const results: RouteResult[] = matchingRoutes.map((route) => ({
         id: route.id,
-        name: route.short_name || route.long_name || null, // Prioritize short_name, otherwise use long_name
+        short_name: route.short_name || route.long_name || null, // Prioritize short_name, otherwise use long_name
       }));
 
       // 3. Store the fresh data in the in-memory cache

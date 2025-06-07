@@ -1,7 +1,3 @@
-// src/components/route-search.tsx
-
-"use client"; // Still essential for client-side hooks
-
 import { useState, useEffect, useMemo } from "react";
 import { Search, MapPin, Clock, Filter } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
