@@ -58,7 +58,8 @@
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.3.3",
     "vinxi": "0.5.3",
-    "zod": "^3.25.48"
+    "zod": "^3.25.48",
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@types/jsonstream": "^0.8.33",
