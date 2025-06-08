@@ -16,11 +16,7 @@ import {
 } from '~/components/ui/sidebar';
 import type { BusRoute } from 'types/bus-routes';
 
-interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  onRouteSelect: (route: BusRoute) => void;
-  selectedRoute?: BusRoute | null;
-  featuredRoutes?: BusRoute[];
-}
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {}
 
 const navigationItems = [
   {
@@ -49,12 +45,7 @@ const navigationItems = [
   },
 ];
 
-export function AppSidebar({
-  onRouteSelect,
-  selectedRoute,
-  featuredRoutes,
-  ...props
-}: AppSidebarProps) {
+export function AppSidebar({ ...props }: AppSidebarProps) {
   return (
     <Sidebar variant='inset' {...props}>
       <SidebarHeader>
@@ -101,10 +92,7 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarGroupLabel>Search Routes</SidebarGroupLabel>
           <SidebarGroupContent>
-            <RouteSearch
-            // onRouteSelect={onRouteSelect}
-            // onSearchChange={() => {}}
-            />
+            <RouteSearch />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

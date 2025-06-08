@@ -32,41 +32,18 @@ const LazyInteractiveMap = lazy(() =>
 );
 
 export default function RouteComponent() {
-  const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
-
-  const handleRouteSelect = (route: BusRoute) => {
-    setSelectedRoute(route);
-  };
-
   return (
     <SidebarProvider>
-      <AppSidebar
-        onRouteSelect={handleRouteSelect}
-        selectedRoute={selectedRoute}
-      />
+      <AppSidebar />
       <SidebarInset>
         <header className='flex h-16 shrink-0 items-center gap-2 border-b px-4'>
           <SidebarTrigger className='-ml-1' />
           <Separator orientation='vertical' className='mr-2 h-4' />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className='hidden md:block'>
-                <BreadcrumbLink href='#'>Bus Route</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className='hidden md:block' />
-              <BreadcrumbItem>
-                <BreadcrumbPage>
-                  {selectedRoute
-                    ? `Route ${selectedRoute.routeNumber}`
-                    : 'Live Map'}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          <div className='align-middle w-full text-center'>Search a Route</div>
         </header>
         <div className='flex flex-1 flex-col gap-4 p-4'>
           <Suspense fallback={<div>Loading Map...</div>}>
-            <LazyInteractiveMap selectedRoute={selectedRoute} />
+            <LazyInteractiveMap />
           </Suspense>
         </div>
         <footer className='mt-8 px-4 py-2 text-xs text-muted-foreground text-center border-t'>

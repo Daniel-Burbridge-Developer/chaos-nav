@@ -1,12 +1,12 @@
+// src/routes/api/v1/livestop/$stopNumber.tsx (OR wherever your API file is located)
 import { json } from '@tanstack/react-start';
 import { createAPIFileRoute } from '@tanstack/react-start/api';
 import * as cheerio from 'cheerio';
 
 export const APIRoute = createAPIFileRoute('/api/v1/livestop/$stopNumber')({
   GET: async ({ params }) => {
-    // Change from POST to GET, and use params
     try {
-      const { stopNumber } = params; // Access the dynamic segment from params
+      const { stopNumber } = params;
 
       if (!stopNumber) {
         return json({ error: 'Missing stop number' }, { status: 400 });
@@ -61,7 +61,6 @@ function parseTimetableHtml(html: string) {
   $('.tpm_row_timetable').each((_, el) => {
     const row = $(el);
 
-    // Extract tripId and fleetId from data attributes
     const tripId = row.data('tripid')?.toString() || '';
     const fleetId = row.data('fleet')?.toString() || null;
 
@@ -72,10 +71,8 @@ function parseTimetableHtml(html: string) {
     const liveStatus =
       row.find('.tt-livetext').text().trim().toUpperCase() === 'LIVE';
 
-    // Bus number is in a span inside the first child div of .tpm_row_timetable
     const busNumber = row.children('div').eq(0).find('span').text().trim();
 
-    // Time until arrival is in a strong tag inside the third child div of .tpm_row_timetable
     const timeUntilArrival = row
       .children('div')
       .eq(2)
@@ -83,22 +80,27 @@ function parseTimetableHtml(html: string) {
       .text()
       .trim();
 
-    // The destination is in a div with class 'route-display-name' inside the second child div
-    const destination = row
+    let destination = row // Use `let` because we'll reassign it
       .children('div')
       .eq(1)
       .find('.route-display-name')
       .first()
       .text()
       .trim();
-    // Use .first() to ensure you get the first one if there are multiple divs with this class,
-    // though in your example, there's only one relevant one.
 
-    // Basic validation for timeUntilArrival (optional, but good for robustness)
+    // === CRITICAL CHANGE HERE: Remove "To " prefix ===
+    // Use a regular expression with 'i' flag for case-insensitive matching
+    // and 'g' flag for global replacement (though 'To ' should only appear once at the start)
+    // Add \s* to handle potential spaces after "To"
+    if (destination.toLowerCase().startsWith('to ')) {
+      destination = destination.substring(3).trim(); // Remove "To " (3 characters) and re-trim
+    }
+    // Alternatively, a more robust regex replacement:
+    // destination = destination.replace(/^to\s+/i, '').trim();
+
     if (!timeUntilArrival) {
       console.warn('Could not extract timeUntilArrival for a row.');
     }
-    // Basic validation for destination (optional)
     if (!destination) {
       console.warn('Could not extract destination for a row.');
     }
@@ -107,7 +109,7 @@ function parseTimetableHtml(html: string) {
       liveStatus,
       busNumber,
       timeUntilArrival,
-      destination,
+      destination, // Now 'destination' will be cleaned
       tripId,
       fleetId,
     });

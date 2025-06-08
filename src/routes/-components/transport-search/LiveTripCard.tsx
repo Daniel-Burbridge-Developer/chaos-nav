@@ -5,143 +5,81 @@ import { useEffect, useMemo, useCallback } from 'react';
 
 interface LiveTripItemProps {
   trip: Trip;
-  liveBusNumber: string; // <-- NEW PROP: The bus number from the RouteCard
+  liveBusNumber: string;
   onLiveStatusUpdate: (tripId: string, isLive: boolean) => void;
 }
 
 const LiveTripCard: React.FC<LiveTripItemProps> = ({
   trip,
-  liveBusNumber, // <-- DESTRUCTURE NEW PROP
+  liveBusNumber,
   onLiveStatusUpdate,
 }) => {
-  // --- Logging for initial render and prop values ---
-  console.log(
-    `%c[LiveTripCard - Render] Trip ID: ${trip.id}, Headsign: "${trip.trip_headsign}", Trip's route_id: "${trip.route_id}", LiveBusNumber (from parent route): "${liveBusNumber}"`,
-    'color: #007bff; font-weight: bold;'
-  );
-
+  // Determine the first stop ID for fetching live data
   const firstStopId = trip.stops?.[0]?.id ?? '';
-  console.log(
-    `%c[LiveTripCard - Render] Trip ID: ${trip.id} - Determined firstStopId: "${firstStopId}"`,
-    'color: #007bff;'
-  );
 
+  // Fetch live data using the custom hook
   const { data: liveData, isLoading, isError } = useLiveTrips(firstStopId);
 
-  // --- Filtering Logic with Detailed Logs ---
+  // Filter live data to find relevant entries based on bus number and destination
   const relevantLiveData = useMemo(() => {
+    // If no live data is received, return an empty array
     if (!liveData) {
-      console.log(
-        `%c[LiveTripCard - Filter] Trip ID: ${trip.id} - liveData is null/undefined.`,
-        'color: #888;'
-      );
       return [];
     }
 
-    console.log(
-      `%c[LiveTripCard - Filter] Trip ID: ${trip.id} - Starting filter process.`,
-      'color: #28a745; font-weight: bold;'
-    );
-    console.log(
-      `%c[LiveTripCard - Filter]   Matching against: LiveBusNumber: "${liveBusNumber}", Trip Headsign: "${trip.trip_headsign}"`,
-      'color: #28a745;'
-    );
-    console.log(
-      `%c[LiveTripCard - Filter]   Raw liveData received (${liveData.length} items):`,
-      'color: #28a745;',
-      liveData
-    );
-
     const filtered = liveData.filter((data) => {
-      // Log individual data points for comparison
-      console.log(
-        `%c[LiveTripCard - Filter Item] Comparing live item: Bus "${data.busNumber}" to "${data.destination}" (Live: ${data.liveStatus})`,
-        'color: #6c757d;'
-      );
+      const normalizedBusNumber = data.busNumber.trim().toLowerCase();
+      const normalizedLiveBusNumber = liveBusNumber.trim().toLowerCase();
+      const normalizedDestination = data.destination.trim().toLowerCase();
+      const normalizedTripHeadsign = trip.trip_headsign?.trim().toLowerCase();
 
-      // *** THE CRITICAL CHANGE IS HERE ***
-      // Compare liveData.busNumber with the new liveBusNumber prop
-      const busNumberMatch = data.busNumber === liveBusNumber;
-      const destinationMatch = data.destination === trip.trip_headsign;
+      const busNumberMatch = normalizedBusNumber === normalizedLiveBusNumber;
+      const destinationMatch = normalizedDestination === normalizedTripHeadsign;
 
-      console.log(
-        `%c[LiveTripCard - Filter Item]   Match Check for Trip ID: ${trip.id}:`,
-        'color: #6c757d;'
-      );
-      console.log(
-        `%c[LiveTripCard - Filter Item]     Bus Number (live vs prop): "${data.busNumber}" === "${liveBusNumber}" => ${busNumberMatch}`,
-        'color: #6c757d;'
-      );
-      console.log(
-        `%c[LiveTripCard - Filter Item]     Destination (live vs trip.headsign): "${data.destination}" === "${trip.trip_headsign}" => ${destinationMatch}`,
-        'color: #6c757d;'
-      );
-
-      if (busNumberMatch && destinationMatch) {
-        console.log(
-          `%c[LiveTripCard - Filter Item]     --> MATCH FOUND for Trip ID: ${trip.id}!`,
-          'color: #ffc107; font-weight: bold;'
-        );
-      }
+      // TEMPORARY DEBUG LOGS:
+      // console.log(`--- Filtering Item for Trip ID: ${trip.id} ---`);
+      // console.log(
+      //   `Live Data Destination: "${data.destination}" (Normalized: "${normalizedDestination}")`
+      // );
+      // console.log(
+      //   `Trip Headsign: "${trip.trip_headsign}" (Normalized: "${normalizedTripHeadsign}")`
+      // );
+      // console.log(
+      //   `Bus Number (Live): "${data.busNumber}" (Normalized: "${normalizedBusNumber}")`
+      // );
+      // console.log(
+      //   `Live Bus Number (Prop): "${liveBusNumber}" (Normalized: "${normalizedLiveBusNumber}")`
+      // );
+      // console.log(`Bus Number Match: ${busNumberMatch}`);
+      // console.log(`Destination Match: ${destinationMatch}`);
+      // console.log(`Overall Match: ${busNumberMatch && destinationMatch}`);
+      // console.log(`-------------------------------------------`);
 
       return busNumberMatch && destinationMatch;
     });
-    console.log(
-      `%c[LiveTripCard - Filter] Trip ID: ${trip.id} - Filtered relevantLiveData length: ${filtered.length}`,
-      'color: #28a745; font-weight: bold;',
-      filtered
-    );
+
     return filtered;
-  }, [liveData, liveBusNumber, trip.trip_headsign, trip.id]); // Dependencies updated
+  }, [liveData, liveBusNumber, trip.trip_headsign]); // Dependencies for useMemo
 
-  // --- useEffect for useLiveTrips status logging ---
+  // Effect to notify the parent component about the live status
   useEffect(() => {
-    if (isLoading) {
-      console.log(
-        `%c[LiveTripCard - Hook Status] Trip ID: ${trip.id} - Live data is loading...`,
-        'color: #ff9800;'
-      );
-    } else if (isError) {
-      console.error(
-        `%c[LiveTripCard - Hook Status] Trip ID: ${trip.id} - Error fetching live data.`,
-        'color: #dc3545;'
-      );
-    } else if (liveData) {
-      console.log(
-        `%c[LiveTripCard - Hook Status] Trip ID: ${trip.id} - Raw live data received:`,
-        'color: #17a2b8;',
-        liveData
-      );
-    }
-  }, [isLoading, isError, liveData, trip.id]);
-
-  // --- useEffect for updating parent's live status ---
-  useEffect(() => {
-    const isCurrentlyLive = (relevantLiveData?.length ?? 0) > 0;
-    console.log(
-      `%c[LiveTripCard - Status Update] Trip ID: ${trip.id} - useEffect updating live status to: ${isCurrentlyLive}. Relevant data length: ${relevantLiveData?.length ?? 0}`,
-      'color: #6f42c1; font-weight: bold;'
-    );
+    // Determine if the trip is currently live based on the filtered data
+    const isCurrentlyLive = relevantLiveData.length > 0;
+    // Call the parent's update function
     onLiveStatusUpdate(trip.id, isCurrentlyLive);
-  }, [relevantLiveData, trip.id, onLiveStatusUpdate]);
+  }, [relevantLiveData, trip.id, onLiveStatusUpdate]); // Dependencies for useEffect
 
-  // --- Render Logic ---
+  // Render loading state
   if (isLoading) {
-    console.log(
-      `%c[LiveTripCard - Render] Trip ID: ${trip.id} - Displaying loading state.`,
-      'color: #ffc107;'
-    );
     return (
       <p className='text-xs text-gray-400'>
         Loading live data for {trip.trip_headsign}...
       </p>
     );
   }
+
+  // Render error state
   if (isError) {
-    console.log(
-      `%c[LiveTripCard - Render] Trip ID: ${trip.id} - Displaying error state.`,
-      'color: #dc3545;'
-    );
     return (
       <p className='text-xs text-red-400'>
         Error fetching live data for {trip.trip_headsign}.
@@ -149,14 +87,10 @@ const LiveTripCard: React.FC<LiveTripItemProps> = ({
     );
   }
 
-  const hasLiveData = (relevantLiveData?.length ?? 0) > 0;
-  console.log(
-    `%c[LiveTripCard - Render] Trip ID: ${trip.id} - Final hasLiveData (relevant): ${hasLiveData}`,
-    hasLiveData
-      ? 'color: #28a745; font-weight: bold;'
-      : 'color: #dc3545; font-weight: bold;'
-  );
+  // Determine if there is any relevant live data to display
+  const hasLiveData = relevantLiveData.length > 0;
 
+  // Render the trip card with live status and details
   return (
     <div className='ml-2 mb-1 border-l-2 pl-2 border-gray-200'>
       <p className='text-sm'>
@@ -172,7 +106,8 @@ const LiveTripCard: React.FC<LiveTripItemProps> = ({
           <span className='font-semibold text-gray-400'>No</span>
         )}
       </p>
-      {relevantLiveData && relevantLiveData.length > 0 && (
+      {/* Conditionally render live data details if available */}
+      {hasLiveData && (
         <ul className='text-xs text-blue-600 list-disc list-inside mt-1'>
           {relevantLiveData.map((data, index) => (
             <li key={index}>

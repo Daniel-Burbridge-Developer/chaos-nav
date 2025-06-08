@@ -6,6 +6,7 @@ import type { Stop } from '~/db/schema/stops'; // Assuming this exists
 import { useTripsByRoute } from '~/hooks/use-trips-by-route-search';
 import { useState, useEffect, useCallback } from 'react';
 import LiveTripCard from './LiveTripCard';
+import { Star } from 'lucide-react';
 
 interface RouteCardProps {
   route: Route; // This 'route' object likely contains 'short_name' and 'long_name'
@@ -113,6 +114,19 @@ export const RouteCard = ({ route }: RouteCardProps) => {
             {route.long_name}
           </h4>
           {isAnyTripLive && <h4 className='text-green-600 font-bold'>LIVE</h4>}
+          <div className='ml-auto flex items-center'>
+            {/* Favorite star button, aligned top right */}
+            <button
+              type='button'
+              aria-label='Favorite route'
+              className='p-1 rounded-full hover:bg-muted transition-colors'
+              style={{ lineHeight: 0 }}
+              // TODO: Add favorite logic here
+            >
+              {/* Replaced inline SVG with Lucide's Star component */}
+              <Star className='size-5 text-yellow-400 fill-current' />
+            </button>
+          </div>
         </div>
 
         {uniqueHeadsignTrips?.map((trip) => (
