@@ -4,6 +4,7 @@ import { Suspense, lazy } from 'react';
 import { useState } from 'react';
 import { AppSidebar } from '~/components/app-sidebar';
 import { BusMap } from '~/components/bus-map';
+import { MapCanvas } from './-components/map-view/MapCanvas';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,8 +27,8 @@ export const Route = createFileRoute('/')({
 });
 
 const LazyInteractiveMap = lazy(() =>
-  import('~/components/bus-map').then((module) => ({
-    default: module.BusMap,
+  import('./-components/map-view/MapCanvas').then((module) => ({
+    default: module.MapCanvas,
   }))
 );
 

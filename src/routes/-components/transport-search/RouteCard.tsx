@@ -41,7 +41,7 @@ const getUniqueHeadsignTrips = (trips: Trip[]) => {
 export const RouteCard = ({ route }: RouteCardProps) => {
   const { data: trips, isLoading, isError, error } = useTripsByRoute(route.id);
   const uniqueHeadsignTrips = getUniqueHeadsignTrips(trips ?? []);
-  const selectedRoutesStore = useSelectedRoutesStore();
+  const { addRoute } = useSelectedRoutesStore(); // Destructure addRoute from the store
 
   const [liveTripStatuses, setLiveTripStatuses] = useState<
     Record<string, boolean>
@@ -85,6 +85,23 @@ export const RouteCard = ({ route }: RouteCardProps) => {
 
   const busNumberToPass = getBusNumberForLiveMatching(route);
 
+  // Handler for adding the route to the store
+  const handleCardClick = () => {
+    // Ensure trips are available before adding to the store
+    if (uniqueHeadsignTrips.length > 0) {
+      addRoute({
+        name: busNumberToPass,
+        trips: uniqueHeadsignTrips,
+      });
+      console.log('Route added to store:', {
+        name: busNumberToPass,
+        trips: uniqueHeadsignTrips,
+      });
+    } else {
+      console.warn('No trips available to add for this route.');
+    }
+  };
+
   if (isLoading) {
     return <Card className='p-3'>Loading route trips...</Card>;
   }
@@ -98,7 +115,10 @@ export const RouteCard = ({ route }: RouteCardProps) => {
   }
 
   return (
-    <Card className='cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md'>
+    <Card
+      className='cursor-pointer transition-all duration-200 hover:scale-[1.01] hover:shadow-md'
+      onClick={handleCardClick} // Add the onClick handler here
+    >
       <CardContent className='p-3'>
         <div className='flex items-center gap-2'>
           <Badge
