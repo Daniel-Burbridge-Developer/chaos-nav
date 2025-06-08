@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
-import { Trip } from '~/db/schema/trips';
-import type {} from '@redux-devtools/extension'; // required for devtools typing
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
+import { Trip } from "~/db/schema/trips";
+import type {} from "@redux-devtools/extension"; // required for devtools typing
 
 export interface SelectedRoute {
   name: string;

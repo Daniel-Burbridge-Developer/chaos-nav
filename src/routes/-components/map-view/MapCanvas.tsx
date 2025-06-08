@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -6,16 +6,16 @@ import {
   Polyline,
   Marker,
   Popup,
-} from 'react-leaflet';
-import { LatLngExpression, LatLngBoundsExpression } from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import { useSelectedRoutesStore } from '~/stores/selectedRoutesStore';
-import { MapPin } from 'lucide-react';
-import type { SelectedRoute } from '~/stores/selectedRoutesStore';
-import { Trip, TripStop } from '~/db/schema/trips'; // Assuming Trip now includes shapeId
-import { Stop } from '~/db/schema/stops';
-import { useQuery } from '@tanstack/react-query';
+} from "react-leaflet";
+import { LatLngExpression, LatLngBoundsExpression } from "leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import { useSelectedRoutesStore } from "~/stores/selectedRoutesStore";
+import { MapPin } from "lucide-react";
+import type { SelectedRoute } from "~/stores/selectedRoutesStore";
+import { Trip, TripStop } from "~/db/schema/trips"; // Assuming Trip now includes shapeId
+import { Stop } from "~/db/schema/stops";
+import { useQuery } from "@tanstack/react-query";
 
 // Fix for default marker icon issues with Webpack/bundlers
 // @ts-ignore
@@ -24,36 +24,36 @@ delete L.Icon.Default.prototype._getIconUrl;
 // Ensure default icon paths are set for Leaflet markers
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
-    'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+    "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
 });
 
 // Define a set of distinct colors for *individual trips*
 const ROUTE_COLORS = [
-  '#E60000', // Red
-  '#008000', // Green
-  '#0000FF', // Blue
-  '#FFA500', // Orange
-  '#800080', // Purple
-  '#00CED1', // DarkTurquoise
-  '#FF1493', // DeepPink
-  '#4B0082', // Indigo
-  '#B8860B', // DarkGoldenRod
-  '#FF4500', // OrangeRed
-  '#2E8B57', // SeaGreen
-  '#1E90FF', // DodgerBlue
-  '#FFD700', // Gold (added more colors for more trips)
-  '#ADFF2F', // GreenYellow
-  '#9932CC', // DarkOrchid
-  '#8B0000', // DarkRed
-  '#006400', // DarkGreen
-  '#4682B4', // SteelBlue
-  '#FF6347', // Tomato
-  '#7B68EE', // MediumSlateBlue
-  '#00FA9A', // MediumSpringGreen
-  '#DC143C', // Crimson
-  '#F0E68C', // Khaki
+  "#E60000", // Red
+  "#008000", // Green
+  "#0000FF", // Blue
+  "#FFA500", // Orange
+  "#800080", // Purple
+  "#00CED1", // DarkTurquoise
+  "#FF1493", // DeepPink
+  "#4B0082", // Indigo
+  "#B8860B", // DarkGoldenRod
+  "#FF4500", // OrangeRed
+  "#2E8B57", // SeaGreen
+  "#1E90FF", // DodgerBlue
+  "#FFD700", // Gold (added more colors for more trips)
+  "#ADFF2F", // GreenYellow
+  "#9932CC", // DarkOrchid
+  "#8B0000", // DarkRed
+  "#006400", // DarkGreen
+  "#4682B4", // SteelBlue
+  "#FF6347", // Tomato
+  "#7B68EE", // MediumSlateBlue
+  "#00FA9A", // MediumSpringGreen
+  "#DC143C", // Crimson
+  "#F0E68C", // Khaki
 ];
 
 // Helper functions (pure functions, no hooks)
@@ -85,7 +85,7 @@ const fetchStopById = async (stopId: string): Promise<Stop | null> => {
 
 const useStopLocations = (stopIds: string[]) => {
   return useQuery<StopLocation[], Error>({
-    queryKey: ['stopLocations', stopIds],
+    queryKey: ["stopLocations", stopIds],
     queryFn: async () => {
       const uniqueStopIds = Array.from(new Set(stopIds.filter((id) => id)));
 
@@ -131,7 +131,7 @@ const fetchShapePoints = async (shapeId: number): Promise<ShapePoint[]> => {
 
 const useShapePoints = (shapeId: number | null) => {
   return useQuery<ShapePoint[], Error>({
-    queryKey: ['shapePoints', shapeId],
+    queryKey: ["shapePoints", shapeId],
     queryFn: () => {
       if (shapeId === null) {
         return Promise.resolve([]); // Return empty array if no shapeId
@@ -140,7 +140,6 @@ const useShapePoints = (shapeId: number | null) => {
     },
     enabled: shapeId !== null, // Only run query if shapeId is provided and not null
     staleTime: 1000 * 60 * 50, // Cache TTL from your API config (50 minutes)
-    cacheTime: 1000 * 60 * 60, // Longer cache time for shape data if less frequent changes
   });
 };
 
@@ -174,7 +173,7 @@ const TripPolylineIndividual = ({
   color,
   stopLocations,
 }: TripPolylineIndividualProps) => {
-  const shapeId = trip.shapeId ?? null;
+  const shapeId = trip.shape_id ?? null;
   const {
     data: shapePoints,
     isLoading: isLoadingShape,
@@ -187,9 +186,9 @@ const TripPolylineIndividual = ({
     if (shapeId !== null) {
       console.log(
         `[Trip ${trip.id} - Shape ${shapeId}] Loading: ${isLoadingShape}, Error: ${isErrorShape}`,
-        'Shape Points:',
+        "Shape Points:",
         shapePoints,
-        'Fetch Error:',
+        "Fetch Error:",
         shapeError
       );
       if (!isLoadingShape && shapePoints && shapePoints.length < 2) {
@@ -235,7 +234,7 @@ const TripPolylineIndividual = ({
 
   return (
     <Polyline
-      key={`trip-polyline-${trip.id}-${shapeId || 'no-shape'}`} // Key for React's reconciliation
+      key={`trip-polyline-${trip.id}-${shapeId || "no-shape"}`} // Key for React's reconciliation
       positions={tripPolyline}
       color={color}
       weight={4}
@@ -402,14 +401,14 @@ export const MapCanvas = () => {
   // Display a message if no routes are selected
   if (selectedRoutes.length === 0) {
     return (
-      <div className='flex-1 flex items-center justify-center'>
-        <div className='text-center space-y-4'>
-          <div className='w-24 h-24 mx-auto bg-muted rounded-full flex items-center justify-center'>
-            <MapPin className='w-12 h-12 text-muted-foreground' />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-24 h-24 mx-auto bg-muted rounded-full flex items-center justify-center">
+            <MapPin className="w-12 h-12 text-muted-foreground" />
           </div>
-          <div className='space-y-2'>
-            <h3 className='text-lg font-semibold'>Select Routes to View</h3>
-            <p className='text-muted-foreground'>
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Select Routes to View</h3>
+            <p className="text-muted-foreground">
               Search for bus routes in the sidebar to view their trips and stops
               on the map.
             </p>
@@ -422,16 +421,16 @@ export const MapCanvas = () => {
   // Display loading state
   if (isLoading) {
     return (
-      <div className='flex-1 flex items-center justify-center'>
-        <p className='text-muted-foreground'>Loading map data...</p>
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground">Loading map data...</p>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className='flex-1 flex items-center justify-center'>
-        <p className='text-red-500'>Error loading map data: {error?.message}</p>
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-red-500">Error loading map data: {error?.message}</p>
       </div>
     );
   }
@@ -442,12 +441,12 @@ export const MapCanvas = () => {
       center={allMapPositions.length > 0 ? allMapPositions[0] : [51.505, -0.09]}
       zoom={13}
       scrollWheelZoom={true}
-      style={{ height: '100%', width: '100%', flexGrow: 1 }}
-      className='z-0'
+      style={{ height: "100%", width: "100%", flexGrow: 1 }}
+      className="z-0"
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
       {/* UniqueStopMarkerRenderer will display markers ONLY at stop locations */}
