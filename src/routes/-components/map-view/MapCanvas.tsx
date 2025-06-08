@@ -29,7 +29,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
 });
 
-// Define a set of distinct colors for *individual trips*
+// Define a set of distinct colors for *individual trips* ~~
 const ROUTE_COLORS = [
   "#E60000", // Red
   "#008000", // Green
