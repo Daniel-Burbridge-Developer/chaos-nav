@@ -1,29 +1,18 @@
-// src/routes/api/trip-by-id.$tripId.ts
-
+// route.$busNumber.ts
 import { db } from '~/db/db'; // Your Drizzle DB instance
-import { schema } from '~/db/schema/index'; // Assuming 'trips' schema is exported from here
-import { eq } from 'drizzle-orm'; // Import 'eq' for exact matching
+import { schema } from '~/db/schema/index'; // Updated: Assuming 'routes' schema is exported from here
+import { eq, or } from 'drizzle-orm'; // Changed ilike to eq
 import { json } from '@tanstack/react-start';
 import { createAPIFileRoute } from '@tanstack/react-start/api';
 
 import { z } from 'zod'; // For input validation
 
-// --- Schema Definitions (Copied from your provided schema) ---
-
-export type TripStop = {
-  id: string; // Corresponds to stop_id in original RawStopTimeJson
-  arrivalTime: string; // Corresponds to arrival_time in original RawStopTimeJson
-  stopSequence: number; // Corresponds to stop_sequence in original RawStopTimeJson
-};
-
-export type Trip = typeof schema.trips.$inferSelect; // Infer the Trip type from your Drizzle schema
-
 // --- Configuration ---
 
-// Define a Zod schema for input validation for the tripId parameter.
-// The tripId is expected to be a non-empty string, as it's the primary key of the trips table.
-const tripIdSchema = z.object({
-  tripId: z.string().min(1, 'Trip ID cannot be empty.'),
+// Define a Zod schema for input validation for the busNumber parameter
+// The bus number is expected to be a string and not empty.
+const busNumberSchema = z.object({
+  busNumber: z.string().min(1, 'Bus number cannot be empty.'),
 });
 
 // Define allowed origins for CORS.
@@ -35,15 +24,22 @@ const ALLOWED_ORIGINS = [
   // Add any other production domains here
 ];
 
-// In-memory cache for single trip results.
-// Key: trip ID (string), Value: { data: Trip | null, timestamp: number }
-const tripByIdCache = new Map<
+// Define the structure of a single route result object
+interface RouteResult {
+  id: string;
+  name: string | null; // Can be short_name or long_name, or null if neither exists
+}
+
+// In-memory cache for route search results.
+// Key: bus number (lowercase), Value: { data: RouteResult[], timestamp: number }
+// Corrected the type of 'data' from 'string[]' to 'RouteResult[]'
+const routeCache = new Map<
   string,
-  { data: Trip | null; timestamp: number }
+  { data: RouteResult[]; timestamp: number }
 >();
 
 // Cache Time To Live (TTL) in milliseconds (e.g., 50 minutes = 3000000ms).
-// Adjust this based on how often your trip data changes and how fresh you need it to be.
+// Adjust this based on how often your route data changes and how fresh you need it to be.
 const CACHE_TTL_MS = 500 * 60 * 1000; // 500 minutes cache TTL
 
 // --- Helper Functions ---
@@ -94,13 +90,13 @@ function handleServerError(error: unknown, apiName: string) {
 // --- API Route Definition ---
 
 /**
- * Defines an API route for fetching a single trip by its ID.
+ * Defines an API route for searching routes by bus number (short_name or long_name).
  * This uses `createAPIFileRoute` for structured API definition in Tanstack Start.
- * The route path is `/api/trip-by-id/:tripId`.
+ * The route path is `/api/route/:busNumber`.
  *
- * The `GET` function handles GET requests and includes in-memory caching for the trip result.
+ * The `GET` function handles GET requests and includes in-memory caching for search results.
  */
-export const APIRoute = createAPIFileRoute('/api/v1/trip/$tripId')({
+export const APIRoute = createAPIFileRoute('/api/v1/route/$busNumber')({
   // Handle OPTIONS requests for CORS preflight
   OPTIONS: async ({ request }) => {
     const origin = request.headers.get('Origin');
@@ -112,7 +108,7 @@ export const APIRoute = createAPIFileRoute('/api/v1/trip/$tripId')({
       });
     }
     // If origin is not allowed, return 403 Forbidden
-    return handleUnauthorizedAccess(origin, 'Trip By ID API - OPTIONS');
+    return handleUnauthorizedAccess(origin, 'Routes API - OPTIONS');
   },
 
   // The 'GET' function handles GET requests to this API route
@@ -120,39 +116,39 @@ export const APIRoute = createAPIFileRoute('/api/v1/trip/$tripId')({
     const origin = request.headers.get('Origin');
     // Check if the origin is allowed for GET requests
     if (origin && !ALLOWED_ORIGINS.includes(origin)) {
-      return handleUnauthorizedAccess(origin, 'Trip By ID API - GET');
+      return handleUnauthorizedAccess(origin, 'Routes API - GET');
     }
 
     try {
-      // Extract tripId from URL parameters
-      const { tripId } = params;
+      // Extract busNumber from URL parameters
+      const { busNumber } = params;
 
-      // Validate the tripId parameter using Zod
-      const validationResult = tripIdSchema.safeParse({ tripId });
+      // Validate the busNumber parameter using Zod
+      const validationResult = busNumberSchema.safeParse({ busNumber });
 
       if (!validationResult.success) {
         // Return a 400 Bad Request if validation fails
         console.warn(
-          `[Trip By ID API] Invalid trip ID parameter: "${tripId}". Details:`,
+          `[Routes API] Invalid bus number parameter: "${busNumber}". Details:`,
           validationResult.error.flatten().fieldErrors
         );
         return json(
           {
-            error: 'Invalid trip ID.',
+            error: 'Invalid bus number.',
             details: validationResult.error.flatten().fieldErrors,
           },
           { status: 400 }
         );
       }
 
-      const searchTripId = validationResult.data.tripId;
-      const cacheKey = searchTripId; // Use trip ID directly as cache key
+      const searchBusNumber = validationResult.data.busNumber;
+      const cacheKey = searchBusNumber.toLowerCase(); // Use lowercase bus number as cache key for consistency
 
       // 1. Check in-memory cache first for a valid, non-expired entry
-      const cachedEntry = tripByIdCache.get(cacheKey);
+      const cachedEntry = routeCache.get(cacheKey);
       if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL_MS) {
         console.log(
-          `[Trip By ID API] Serving from in-memory cache for trip ID: "${cacheKey}".`
+          `[Routes API] Serving from in-memory cache for bus number: "${cacheKey}".`
         );
         // Ensure the data from cache is returned with the correct type
         return json(cachedEntry.data, {
@@ -163,33 +159,43 @@ export const APIRoute = createAPIFileRoute('/api/v1/trip/$tripId')({
 
       // 2. If not in cache or expired, fetch data from the database
       console.log(
-        `[Trip By ID API] Fetching from DB for trip ID: "${cacheKey}".`
+        `[Routes API] Fetching from DB for bus number: "${cacheKey}".`
       );
+      const matchingRoutes = await db
+        .select({
+          id: schema.routes.id,
+          short_name: schema.routes.short_name,
+          long_name: schema.routes.long_name,
+        })
+        .from(schema.routes)
+        .where(
+          or(
+            eq(schema.routes.short_name, searchBusNumber), // Changed to eq for exact match
+            eq(schema.routes.long_name, searchBusNumber) // Changed to eq for exact match
+          )
+        )
+        .limit(5);
 
-      // Drizzle query for exact match on 'id' and selecting a single trip
-      const tripResult: Trip[] = await db
-        .select() // Select all columns for the Trip type
-        .from(schema.trips)
-        .where(eq(schema.trips.id, searchTripId)) // Exact match on 'id'
-        .limit(1); // Expecting only one trip for a given ID
-
-      const foundTrip: Trip | null =
-        tripResult.length > 0 ? tripResult[0] : null;
+      // Map the results to the desired { id, name } object structure
+      const results: RouteResult[] = matchingRoutes.map((route) => ({
+        id: route.id,
+        name: route.short_name || route.long_name || null, // Prioritize short_name, otherwise use long_name
+      }));
 
       // 3. Store the fresh data in the in-memory cache
-      tripByIdCache.set(cacheKey, {
-        data: foundTrip, // Storing a single Trip object or null
+      routeCache.set(cacheKey, {
+        data: results, // Storing RouteResult[] objects now
         timestamp: Date.now(),
       });
 
       console.log(
-        `[Trip By ID API] DB query completed. Trip found: ${foundTrip ? 'Yes' : 'No'} for trip ID: "${searchTripId}". Data cached.`
+        `[Routes API] DB query completed. Found ${results.length} entries for bus number: "${searchBusNumber}". Data cached.`
       );
-      // Return the found trip (or null) as a JSON response
-      return json(foundTrip, { status: 200, headers: getCorsHeaders(origin) });
+      // Return the found route IDs and names as a JSON response
+      return json(results, { status: 200, headers: getCorsHeaders(origin) });
     } catch (error) {
       // Catch any unexpected errors during processing and return a 500 error
-      return handleServerError(error, 'Trip By ID API - GET');
+      return handleServerError(error, 'Routes API - GET');
     }
   },
 });

@@ -12,26 +12,12 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as IndexImport } from './routes/index'
-import { Route as StopsIndexImport } from './routes/stops/index'
-import { Route as BusRoutesIndexImport } from './routes/bus-routes/index'
 
 // Create/Update Routes
 
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const StopsIndexRoute = StopsIndexImport.update({
-  id: '/stops/',
-  path: '/stops/',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const BusRoutesIndexRoute = BusRoutesIndexImport.update({
-  id: '/bus-routes/',
-  path: '/bus-routes/',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -46,20 +32,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
-    '/bus-routes/': {
-      id: '/bus-routes/'
-      path: '/bus-routes'
-      fullPath: '/bus-routes'
-      preLoaderRoute: typeof BusRoutesIndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/stops/': {
-      id: '/stops/'
-      path: '/stops'
-      fullPath: '/stops'
-      preLoaderRoute: typeof StopsIndexImport
-      parentRoute: typeof rootRoute
-    }
   }
 }
 
@@ -67,42 +39,32 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/bus-routes': typeof BusRoutesIndexRoute
-  '/stops': typeof StopsIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/bus-routes': typeof BusRoutesIndexRoute
-  '/stops': typeof StopsIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
-  '/bus-routes/': typeof BusRoutesIndexRoute
-  '/stops/': typeof StopsIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/bus-routes' | '/stops'
+  fullPaths: '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/bus-routes' | '/stops'
-  id: '__root__' | '/' | '/bus-routes/' | '/stops/'
+  to: '/'
+  id: '__root__' | '/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  BusRoutesIndexRoute: typeof BusRoutesIndexRoute
-  StopsIndexRoute: typeof StopsIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  BusRoutesIndexRoute: BusRoutesIndexRoute,
-  StopsIndexRoute: StopsIndexRoute,
 }
 
 export const routeTree = rootRoute
@@ -115,19 +77,11 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/",
-        "/bus-routes/",
-        "/stops/"
+        "/"
       ]
     },
     "/": {
       "filePath": "index.tsx"
-    },
-    "/bus-routes/": {
-      "filePath": "bus-routes/index.tsx"
-    },
-    "/stops/": {
-      "filePath": "stops/index.tsx"
     }
   }
 }

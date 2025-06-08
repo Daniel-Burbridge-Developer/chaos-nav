@@ -1,8 +1,9 @@
+import { createAPIFileRoute } from '@tanstack/react-start/api';
+
 import { db } from '~/db/db'; // Your Drizzle DB instance
 import { schema } from '~/db/schema/index'; // Updated: Assuming 'routes' schema is exported from here
 import { ilike, or } from 'drizzle-orm';
 import { json } from '@tanstack/react-start';
-import { createAPIFileRoute } from '@tanstack/react-start/api';
 
 import { z } from 'zod'; // For input validation
 
@@ -26,7 +27,7 @@ const ALLOWED_ORIGINS = [
 // Define the structure of a single route result object
 interface RouteResult {
   id: string;
-  name: string | null; // Can be short_name or long_name, or null if neither exists
+  short_name: string | null; // Can be short_name or long_name, or null if neither exists
 }
 
 // In-memory cache for route search results.
@@ -39,7 +40,7 @@ const routeCache = new Map<
 
 // Cache Time To Live (TTL) in milliseconds (e.g., 50 minutes = 3000000ms).
 // Adjust this based on how often your route data changes and how fresh you need it to be.
-const CACHE_TTL_MS = 50 * 60 * 1000; // 50 minutes cache TTL
+const CACHE_TTL_MS = 500 * 60 * 1000; // 500 minutes cache TTL
 
 // --- Helper Functions ---
 
@@ -178,7 +179,7 @@ export const APIRoute = createAPIFileRoute('/api/v1/routes/$busNumber')({
       // Map the results to the desired { id, name } object structure
       const results: RouteResult[] = matchingRoutes.map((route) => ({
         id: route.id,
-        name: route.short_name || route.long_name || null, // Prioritize short_name, otherwise use long_name
+        short_name: route.short_name || route.long_name || null, // Prioritize short_name, otherwise use long_name
       }));
 
       // 3. Store the fresh data in the in-memory cache

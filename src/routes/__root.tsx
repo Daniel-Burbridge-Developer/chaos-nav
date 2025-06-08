@@ -13,8 +13,6 @@ import appCss from '~/styles/app.css?url';
 import { seo } from '~/utils/seo';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Analytics } from '@vercel/analytics/react';
-import { Toaster } from '@/components/ui/sonner';
-import TopNav from './-components/topnav';
 
 import L from 'leaflet'; // Import Leaflet library itself
 import leafletCss from 'leaflet/dist/leaflet.css?url';
@@ -41,7 +39,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       ...seo({
-        title: 'Routyr',
+        title: 'TP Scry',
         description: `Tracking Transperth in real-time`,
       }),
     ],
@@ -98,9 +96,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <HeadContent />
         </head>
         <body>
-          <TopNav />
           {children}
-          <Toaster richColors closeButton />
+          {/* <Toaster richColors closeButton /> */}
           <TanStackRouterDevtools position='bottom-right' />
           <Analytics />
           <Scripts />

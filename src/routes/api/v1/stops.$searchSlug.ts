@@ -35,7 +35,7 @@ const stopsSearchCache = new Map<string, { data: Stop[]; timestamp: number }>();
 
 // Cache Time To Live (TTL) in milliseconds (e.g., 50 minutes = 3000000ms).
 // Adjust this based on how often your stop data changes and how fresh you need it to be.
-const CACHE_TTL_MS = 50 * 60 * 1000; // 50 minutes cache TTL
+const CACHE_TTL_MS = 500 * 60 * 1000; // 500 minutes cache TTL
 
 // --- Helper Functions ---
 
