@@ -39,7 +39,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       ...seo({
-        title: 'Routyr',
+        title: 'TP Scry',
         description: `Tracking Transperth in real-time`,
       }),
     ],

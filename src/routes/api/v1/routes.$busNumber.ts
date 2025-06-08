@@ -1,25 +1,25 @@
-import { db } from "~/db/db"; // Your Drizzle DB instance
-import { schema } from "~/db/schema/index"; // Updated: Assuming 'routes' schema is exported from here
-import { ilike, or } from "drizzle-orm";
-import { json } from "@tanstack/react-start";
-import { createAPIFileRoute } from "@tanstack/react-start/api";
+import { db } from '~/db/db'; // Your Drizzle DB instance
+import { schema } from '~/db/schema/index'; // Updated: Assuming 'routes' schema is exported from here
+import { ilike, or } from 'drizzle-orm';
+import { json } from '@tanstack/react-start';
+import { createAPIFileRoute } from '@tanstack/react-start/api';
 
-import { z } from "zod"; // For input validation
+import { z } from 'zod'; // For input validation
 
 // --- Configuration ---
 
 // Define a Zod schema for input validation for the busNumber parameter
 // The bus number is expected to be a string and not empty.
 const busNumberSchema = z.object({
-  busNumber: z.string().min(1, "Bus number cannot be empty."),
+  busNumber: z.string().min(1, 'Bus number cannot be empty.'),
 });
 
 // Define allowed origins for CORS.
 // IMPORTANT: For production, list specific domains that need access.
 const ALLOWED_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://chaos-nav.unstablevault.dev/",
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://chaos-nav.unstablevault.dev/',
   // Add any other production domains here
 ];
 
@@ -54,11 +54,11 @@ function getCorsHeaders(origin: string | null): Headers {
   const headers = new Headers();
   if (origin) {
     // Set the specific origin if it's provided and allowed (checked before calling this function)
-    headers.set("Access-Control-Allow-Origin", origin);
+    headers.set('Access-Control-Allow-Origin', origin);
   }
-  headers.set("Access-Control-Allow-Methods", "GET,OPTIONS");
-  headers.set("Access-Control-Allow-Headers", "Content-Type");
-  headers.set("Access-Control-Max-Age", "86400"); // Cache preflight for 24 hours
+  headers.set('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  headers.set('Access-Control-Allow-Headers', 'Content-Type');
+  headers.set('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
   return headers;
 }
 
@@ -72,7 +72,7 @@ function handleUnauthorizedAccess(origin: string | null, apiName: string) {
   console.warn(
     `[${apiName}] Unauthorized access attempt from Origin: "${origin}"`
   );
-  return json({ error: "Unauthorized access" }, { status: 403 });
+  return json({ error: 'Unauthorized access' }, { status: 403 });
 }
 
 /**
@@ -83,7 +83,7 @@ function handleUnauthorizedAccess(origin: string | null, apiName: string) {
  */
 function handleServerError(error: unknown, apiName: string) {
   console.error(`[${apiName}] An unexpected server error occurred:`, error);
-  return json({ error: "An internal server error occurred." }, { status: 500 });
+  return json({ error: 'An internal server error occurred.' }, { status: 500 });
 }
 
 // --- API Route Definition ---
@@ -95,10 +95,10 @@ function handleServerError(error: unknown, apiName: string) {
  *
  * The `GET` function handles GET requests and includes in-memory caching for search results.
  */
-export const APIRoute = createAPIFileRoute("/api/v1/routes/$busNumber")({
+export const APIRoute = createAPIFileRoute('/api/v1/routes/$busNumber')({
   // Handle OPTIONS requests for CORS preflight
   OPTIONS: async ({ request }) => {
-    const origin = request.headers.get("Origin");
+    const origin = request.headers.get('Origin');
     if (origin && ALLOWED_ORIGINS.includes(origin)) {
       // Return a 204 No Content response with CORS headers
       return new Response(null, {
@@ -107,15 +107,15 @@ export const APIRoute = createAPIFileRoute("/api/v1/routes/$busNumber")({
       });
     }
     // If origin is not allowed, return 403 Forbidden
-    return handleUnauthorizedAccess(origin, "Routes API - OPTIONS");
+    return handleUnauthorizedAccess(origin, 'Routes API - OPTIONS');
   },
 
   // The 'GET' function handles GET requests to this API route
   GET: async ({ params, request }) => {
-    const origin = request.headers.get("Origin");
+    const origin = request.headers.get('Origin');
     // Check if the origin is allowed for GET requests
     if (origin && !ALLOWED_ORIGINS.includes(origin)) {
-      return handleUnauthorizedAccess(origin, "Routes API - GET");
+      return handleUnauthorizedAccess(origin, 'Routes API - GET');
     }
 
     try {
@@ -133,7 +133,7 @@ export const APIRoute = createAPIFileRoute("/api/v1/routes/$busNumber")({
         );
         return json(
           {
-            error: "Invalid bus number.",
+            error: 'Invalid bus number.',
             details: validationResult.error.flatten().fieldErrors,
           },
           { status: 400 }
@@ -194,7 +194,7 @@ export const APIRoute = createAPIFileRoute("/api/v1/routes/$busNumber")({
       return json(results, { status: 200, headers: getCorsHeaders(origin) });
     } catch (error) {
       // Catch any unexpected errors during processing and return a 500 error
-      return handleServerError(error, "Routes API - GET");
+      return handleServerError(error, 'Routes API - GET');
     }
   },
 });

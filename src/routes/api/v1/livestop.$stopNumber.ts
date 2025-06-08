@@ -53,11 +53,21 @@ function parseTimetableHtml(html: string) {
     liveStatus: boolean;
     busNumber: string;
     timeUntilArrival: string;
-    destination: string; // Added new field for destination
+    destination: string;
+    tripId: string;
+    fleetId: string | null;
   }[] = [];
 
   $('.tpm_row_timetable').each((_, el) => {
     const row = $(el);
+
+    // Extract tripId and fleetId from data attributes
+    const tripId = row.data('tripid')?.toString() || '';
+    const fleetId = row.data('fleet')?.toString() || null;
+
+    if (!tripId) {
+      console.warn('Could not extract tripId for a row.');
+    }
 
     const liveStatus =
       row.find('.tt-livetext').text().trim().toUpperCase() === 'LIVE';
@@ -73,7 +83,6 @@ function parseTimetableHtml(html: string) {
       .text()
       .trim();
 
-    // --- NEW: Destination extraction ---
     // The destination is in a div with class 'route-display-name' inside the second child div
     const destination = row
       .children('div')
@@ -84,7 +93,6 @@ function parseTimetableHtml(html: string) {
       .trim();
     // Use .first() to ensure you get the first one if there are multiple divs with this class,
     // though in your example, there's only one relevant one.
-    // --- END NEW ---
 
     // Basic validation for timeUntilArrival (optional, but good for robustness)
     if (!timeUntilArrival) {
@@ -99,7 +107,9 @@ function parseTimetableHtml(html: string) {
       liveStatus,
       busNumber,
       timeUntilArrival,
-      destination, // Include destination in the pushed object
+      destination,
+      tripId,
+      fleetId,
     });
   });
 
