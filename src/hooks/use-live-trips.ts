@@ -1,3 +1,5 @@
+// src/hooks/use-live-trips.ts (or wherever your use-live-trips.ts file is)
+
 import { useQuery } from '@tanstack/react-query';
 
 interface TripData {
@@ -27,11 +29,29 @@ const getLiveTripsByFirstStopId = async (query: string) => {
       if (!contentType || !contentType.includes('application/json')) {
         throw new Error(`Received non-JSON response from ${type} API.`);
       }
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        return data;
+      const rawData = await response.json(); // Get the raw JSON data
+
+      // --- CRITICAL CHANGE HERE ---
+      // Check if the data is an object with a 'data' property that is an array
+      if (
+        typeof rawData === 'object' &&
+        rawData !== null &&
+        Array.isArray(rawData.data)
+      ) {
+        return rawData.data; // Return the array contained within the 'data' property
+      } else if (Array.isArray(rawData)) {
+        // Fallback for direct array response (less likely now)
+        console.warn(
+          `API response for ${type} is a direct array (unexpected for this error):`,
+          rawData
+        );
+        return rawData;
       } else {
-        console.warn(`API response for ${type} is not an array:`, data);
+        // This is the line that was causing your warning, now it's only hit if it's truly not an array AND not an object with a 'data' array
+        console.warn(
+          `API response for ${type} is not an array or does not contain a 'data' array:`,
+          rawData
+        );
         return [];
       }
     };
