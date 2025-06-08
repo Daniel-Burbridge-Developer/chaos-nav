@@ -1,7 +1,8 @@
 // src/components/transport-search/LiveTripCard.tsx
 import { Trip } from '~/db/schema/trips';
 import { useLiveTrips } from '~/hooks/use-live-trips';
-import { useEffect, useMemo, useCallback } from 'react';
+import { useEffect } from 'react';
+import { useTripLiveStatus } from '~/hooks/use-trip-live-status'; // Import the new hook
 
 interface LiveTripItemProps {
   trip: Trip;
@@ -20,54 +21,18 @@ const LiveTripCard: React.FC<LiveTripItemProps> = ({
   // Fetch live data using the custom hook
   const { data: liveData, isLoading, isError } = useLiveTrips(firstStopId);
 
-  // Filter live data to find relevant entries based on bus number and destination
-  const relevantLiveData = useMemo(() => {
-    // If no live data is received, return an empty array
-    if (!liveData) {
-      return [];
-    }
-
-    const filtered = liveData.filter((data) => {
-      const normalizedBusNumber = data.busNumber.trim().toLowerCase();
-      const normalizedLiveBusNumber = liveBusNumber.trim().toLowerCase();
-      const normalizedDestination = data.destination.trim().toLowerCase();
-      const normalizedTripHeadsign = trip.trip_headsign?.trim().toLowerCase();
-
-      const busNumberMatch = normalizedBusNumber === normalizedLiveBusNumber;
-      const destinationMatch = normalizedDestination === normalizedTripHeadsign;
-
-      // TEMPORARY DEBUG LOGS:
-      // console.log(`--- Filtering Item for Trip ID: ${trip.id} ---`);
-      // console.log(
-      //   `Live Data Destination: "${data.destination}" (Normalized: "${normalizedDestination}")`
-      // );
-      // console.log(
-      //   `Trip Headsign: "${trip.trip_headsign}" (Normalized: "${normalizedTripHeadsign}")`
-      // );
-      // console.log(
-      //   `Bus Number (Live): "${data.busNumber}" (Normalized: "${normalizedBusNumber}")`
-      // );
-      // console.log(
-      //   `Live Bus Number (Prop): "${liveBusNumber}" (Normalized: "${normalizedLiveBusNumber}")`
-      // );
-      // console.log(`Bus Number Match: ${busNumberMatch}`);
-      // console.log(`Destination Match: ${destinationMatch}`);
-      // console.log(`Overall Match: ${busNumberMatch && destinationMatch}`);
-      // console.log(`-------------------------------------------`);
-
-      return busNumberMatch && destinationMatch;
-    });
-
-    return filtered;
-  }, [liveData, liveBusNumber, trip.trip_headsign]); // Dependencies for useMemo
+  // Use the new custom hook to determine live status
+  const { isLive: hasLiveData, relevantLiveData } = useTripLiveStatus({
+    liveData,
+    liveBusNumber,
+    tripHeadsign: trip.trip_headsign,
+  });
 
   // Effect to notify the parent component about the live status
   useEffect(() => {
-    // Determine if the trip is currently live based on the filtered data
-    const isCurrentlyLive = relevantLiveData.length > 0;
     // Call the parent's update function
-    onLiveStatusUpdate(trip.id, isCurrentlyLive);
-  }, [relevantLiveData, trip.id, onLiveStatusUpdate]); // Dependencies for useEffect
+    onLiveStatusUpdate(trip.id, hasLiveData);
+  }, [hasLiveData, trip.id, onLiveStatusUpdate]); // Dependencies for useEffect
 
   // Render loading state
   if (isLoading) {
@@ -86,9 +51,6 @@ const LiveTripCard: React.FC<LiveTripItemProps> = ({
       </p>
     );
   }
-
-  // Determine if there is any relevant live data to display
-  const hasLiveData = relevantLiveData.length > 0;
 
   // Render the trip card with live status and details
   return (

@@ -20,7 +20,7 @@ const ALLOWED_ORIGINS = [
 ];
 
 // Define the structure of a single live stop result object
-interface LiveStopResult {
+export interface LiveStopResult {
   liveStatus: boolean;
   busNumber: string;
   timeUntilArrival: string;

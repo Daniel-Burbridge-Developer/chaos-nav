@@ -7,6 +7,7 @@ import { useTripsByRoute } from '~/hooks/use-trips-by-route-search';
 import { useState, useEffect, useCallback } from 'react';
 import LiveTripCard from './LiveTripCard';
 import { Star } from 'lucide-react';
+import { useSelectedRoutesStore } from '~/stores/selectedRoutesStore';
 
 interface RouteCardProps {
   route: Route; // This 'route' object likely contains 'short_name' and 'long_name'
@@ -40,6 +41,7 @@ const getUniqueHeadsignTrips = (trips: Trip[]) => {
 export const RouteCard = ({ route }: RouteCardProps) => {
   const { data: trips, isLoading, isError, error } = useTripsByRoute(route.id);
   const uniqueHeadsignTrips = getUniqueHeadsignTrips(trips ?? []);
+  const selectedRoutesStore = useSelectedRoutesStore();
 
   const [liveTripStatuses, setLiveTripStatuses] = useState<
     Record<string, boolean>
