@@ -54,5 +54,8 @@ export const useLiveTrips = (query: string) => {
     queryFn: () => getLiveTripsByFirstStopId(query),
     enabled: !!query.trim(),
     staleTime: 1000 * 60 * 0.5, // 30 seconds
+    refetchInterval: 1000 * 60 * 0.5, // Actively refetch every 30 seconds
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 };
