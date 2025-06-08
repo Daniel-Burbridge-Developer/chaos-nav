@@ -13,7 +13,7 @@ import L from 'leaflet';
 import { useSelectedRoutesStore } from '~/stores/selectedRoutesStore';
 import { MapPin } from 'lucide-react';
 import type { SelectedRoute } from '~/stores/selectedRoutesStore';
-import { Trip, TripStop } from '~/db/schema/trips';
+import { Trip, TripStop } from '~/db/schema/trips'; // Assuming Trip now includes shapeId
 import { Stop } from '~/db/schema/stops';
 import { useQuery } from '@tanstack/react-query';
 
@@ -60,7 +60,14 @@ const ROUTE_COLORS = [
 const extractTrips = (route: SelectedRoute): Trip[] => route.trips;
 const extractStops = (trip: Trip): TripStop[] => trip.stops || [];
 
-// --- TanStack Query Hook Definition ---
+// --- Schema Definitions for Shape (Copied from your provided schema) ---
+export type ShapePoint = {
+  lat: number;
+  lon: number;
+  sequence: number;
+};
+
+// --- TanStack Query Hook Definitions ---
 interface StopLocation {
   id: string;
   lat: number;
@@ -102,9 +109,38 @@ const useStopLocations = (stopIds: string[]) => {
           name: stop.name,
         }));
     },
-    enabled: stopIds.length > 0, // This internal 'enabled' prop correctly handles no stopIds
+    enabled: stopIds.length > 0,
     staleTime: 1000 * 60 * 5,
     cacheTime: 1000 * 60 * 10,
+  });
+};
+
+/**
+ * Hook to fetch shape points by shape ID.
+ * @param shapeId The ID of the shape to fetch.
+ * @returns A QueryResult containing the shape points.
+ */
+const fetchShapePoints = async (shapeId: number): Promise<ShapePoint[]> => {
+  console.log(`THE SHAPE ID IS: ${shapeId}`);
+  const response = await fetch(`/api/v1/shape/${shapeId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch shape ${shapeId}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+const useShapePoints = (shapeId: number | null) => {
+  return useQuery<ShapePoint[], Error>({
+    queryKey: ['shapePoints', shapeId],
+    queryFn: () => {
+      if (shapeId === null) {
+        return Promise.resolve([]); // Return empty array if no shapeId
+      }
+      return fetchShapePoints(shapeId);
+    },
+    enabled: shapeId !== null, // Only run query if shapeId is provided and not null
+    staleTime: 1000 * 60 * 50, // Cache TTL from your API config (50 minutes)
+    cacheTime: 1000 * 60 * 60, // Longer cache time for shape data if less frequent changes
   });
 };
 
@@ -114,10 +150,9 @@ interface MapUpdaterProps {
 }
 
 const MapUpdater = ({ positions }: MapUpdaterProps) => {
-  const map = useMap(); // Hook call
+  const map = useMap();
 
   useEffect(() => {
-    // Hook call
     if (positions.length > 0) {
       const bounds = L.latLngBounds(positions);
       map.fitBounds(bounds, { padding: [50, 50] });
@@ -129,9 +164,9 @@ const MapUpdater = ({ positions }: MapUpdaterProps) => {
 
 // --- Individual Trip Polyline Component Definition ---
 interface TripPolylineIndividualProps {
-  trip: Trip;
+  trip: Trip; // Assuming Trip now includes shapeId: number | null
   color: string;
-  stopLocations: StopLocation[];
+  stopLocations: StopLocation[]; // Still passed, but now only used for debugging if needed, not line path
 }
 
 const TripPolylineIndividual = ({
@@ -139,26 +174,68 @@ const TripPolylineIndividual = ({
   color,
   stopLocations,
 }: TripPolylineIndividualProps) => {
-  const tripPolyline: LatLngExpression[] = useMemo(() => {
-    const polyline: LatLngExpression[] = [];
-    const tripStops = extractStops(trip);
+  const shapeId = trip.shapeId ?? null;
+  const {
+    data: shapePoints,
+    isLoading: isLoadingShape,
+    isError: isErrorShape,
+    error: shapeError,
+  } = useShapePoints(shapeId);
 
-    tripStops.forEach((tripStop) => {
-      const stopDetail = stopLocations.find((sl) => sl.id === tripStop.id);
-      if (stopDetail) {
-        polyline.push([stopDetail.lat, stopDetail.lon]);
+  // DEBUG LOG: Track the status of shape data fetching and availability
+  useEffect(() => {
+    if (shapeId !== null) {
+      console.log(
+        `[Trip ${trip.id} - Shape ${shapeId}] Loading: ${isLoadingShape}, Error: ${isErrorShape}`,
+        'Shape Points:',
+        shapePoints,
+        'Fetch Error:',
+        shapeError
+      );
+      if (!isLoadingShape && shapePoints && shapePoints.length < 2) {
+        console.warn(
+          `[Trip ${trip.id} - Shape ${shapeId}] Shape data loaded, but insufficient points (${shapePoints.length}) for polyline.`
+        );
       }
-    });
-    return polyline;
-  }, [trip, stopLocations]);
+    } else {
+      console.log(
+        `[Trip ${trip.id}] No shapeId detected for this trip. No shape line will be drawn.`
+      );
+    }
+  }, [shapeId, isLoadingShape, isErrorShape, shapePoints, shapeError, trip.id]);
 
-  if (tripPolyline.length < 2) {
+  // Memoize the polyline path. It will ONLY use shape points.
+  // If shape points are not available or insufficient, an empty array is returned.
+  // This explicitly removes the fallback to stop locations for drawing the line.
+  const tripPolyline: LatLngExpression[] = useMemo(() => {
+    if (shapeId !== null && shapePoints && shapePoints.length > 1) {
+      // Sort shape points by sequence to ensure correct path order
+      const sortedShapePoints = [...shapePoints].sort(
+        (a, b) => a.sequence - b.sequence
+      );
+      console.log(
+        `[Trip ${trip.id} - Shape ${shapeId}] Using shape data for polyline (${sortedShapePoints.length} points).`
+      );
+      return sortedShapePoints.map((p) => [p.lat, p.lon]);
+    }
+    // If no shapeId, or shapePoints not loaded/insufficient, return an empty array.
+    // This will prevent the Polyline component from rendering for this trip.
+    console.log(
+      `[Trip ${trip.id} - Shape ${shapeId}] Polyline will not be drawn (shape data not ready or insufficient).`
+    );
+    return [];
+  }, [shapeId, shapePoints, trip.id]); // Added trip.id to dependencies for clearer logs
+
+  // If shape data is still loading, or if the resulting polyline has fewer than 2 points,
+  // then there's no valid line to draw based on the shape.
+  // Return null to prevent rendering an incomplete or empty polyline.
+  if (isLoadingShape || tripPolyline.length < 2) {
     return null;
   }
 
   return (
     <Polyline
-      key={`trip-polyline-${trip.id}`}
+      key={`trip-polyline-${trip.id}-${shapeId || 'no-shape'}`} // Key for React's reconciliation
       positions={tripPolyline}
       color={color}
       weight={4}
@@ -177,17 +254,17 @@ const AllTripsPolylineLayer = ({
   stopLocations,
 }: AllTripsPolylineLayerProps) => {
   if (!stopLocations || stopLocations.length === 0 || trips.length === 0) {
-    return null; // Return null if no data to render polylines
+    return null; // Return null if no data to process/render
   }
 
   return (
     <>
       {trips.map(({ trip, color }) => (
         <TripPolylineIndividual
-          key={`trip-individual-${trip.id}`}
+          key={`trip-individual-${trip.id}`} // Stable key for each individual trip component
           trip={trip}
           color={color}
-          stopLocations={stopLocations}
+          stopLocations={stopLocations} // Pass stopLocations (not used for lines, but keep for type safety/future)
         />
       ))}
     </>
@@ -224,7 +301,7 @@ const UniqueStopMarkerRenderer = ({
   }, [stopLocations]);
 
   if (markers.length === 0) {
-    return null; // No markers to render
+    return null;
   }
 
   return (
@@ -243,15 +320,14 @@ const UniqueStopMarkerRenderer = ({
 
 // --- Main Map Canvas Component ---
 export const MapCanvas = () => {
-  // ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP LEVEL
-  // This ensures the same number and order of hook calls on every render.
+  // ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP LEVEL OF THE COMPONENT.
+  // This ensures a consistent number and order of hook calls on every render,
+  // preventing the "Rendered more hooks" error.
 
-  const { selectedRoutes } = useSelectedRoutesStore(); // Hook 1: Always called.
+  const { selectedRoutes } = useSelectedRoutesStore();
 
-  // Prepare allStopIds. This useMemo is always called.
+  // Prepare allStopIds (always called)
   const allStopIds = useMemo(() => {
-    // If selectedRoutes is empty, this will correctly return an empty array,
-    // but the useMemo itself is always executed.
     return Array.from(
       new Set(
         selectedRoutes.flatMap((route) =>
@@ -263,15 +339,15 @@ export const MapCanvas = () => {
     );
   }, [selectedRoutes]);
 
-  // Fetch stop locations. This useQuery is always called.
+  // Fetch stop locations (always called)
   const {
     data: stopLocations,
     isLoading,
     isError,
     error,
-  } = useStopLocations(allStopIds); // `enabled` prop inside `useStopLocations` handles fetching logic.
+  } = useStopLocations(allStopIds);
 
-  // Prepare trips with colors. This useMemo is always called.
+  // Prepare trips with colors and ensure `shapeId` is present (always called)
   const tripsToRender = useMemo(() => {
     const tripsWithColors: { trip: Trip; color: string }[] = [];
     let colorIndex = 0;
@@ -279,19 +355,38 @@ export const MapCanvas = () => {
     selectedRoutes.forEach((route) => {
       extractTrips(route).forEach((trip) => {
         const color = ROUTE_COLORS[colorIndex % ROUTE_COLORS.length];
-        tripsWithColors.push({ trip, color });
+
+        // --- IMPORTANT: TEMPORARY MOCKING FOR DEBUGGING ---
+        // You MUST ensure your 'Trip' objects (fetched from your backend)
+        // actually contain the 'shapeId' property.
+        // If not, you need to modify your DB schema and backend API to include it.
+        // This mocking is to help determine if the problem is 'shapeId' absence
+        // or a problem with the shape API call.
+        const tripWithMockedShapeId: Trip = {
+          ...trip,
+          // Assign a known existing shape ID from your database for testing.
+          // Example: If your DB has shape ID 101 or 102, use one of those.
+          shapeId: 101, // <-- REPLACE THIS WITH YOUR ACTUAL SHAPE ID FIELD LATER
+        };
+        tripsWithColors.push({ trip: tripWithMockedShapeId, color });
+        // --- END TEMPORARY MOCKING ---
+
         colorIndex++;
       });
     });
     return tripsWithColors;
   }, [selectedRoutes]);
 
-  // Calculate all map positions. This useMemo is always called.
+  // Calculate all map positions (always called)
   const allMapPositions: LatLngExpression[] = useMemo(() => {
-    // Logic inside can be conditional, but the hook call itself is not.
     if (!stopLocations) return [];
     const positions: LatLngExpression[] = [];
     tripsToRender.forEach(({ trip }) => {
+      // For map bounding, we'll use stop locations.
+      // To precisely fit bounds to shapes, you would need to have all shape points
+      // aggregated at this level, which means fetching all shapes here or accumulating them.
+      // For simplicity and to avoid over-complicating this specific MapCanvas,
+      // we'll stick to stop locations for bounds calculation, as it's generally a good proxy.
       extractStops(trip).forEach((tripStop) => {
         const stopDetail = stopLocations.find((sl) => sl.id === tripStop.id);
         if (stopDetail) {
@@ -302,10 +397,9 @@ export const MapCanvas = () => {
     return positions;
   }, [tripsToRender, stopLocations]);
 
-  // --- NOW, WE CAN HAVE CONDITIONAL UI RENDERING BASED ON THE RESULTS OF HOOKS ---
+  // --- Conditional UI RENDERING (after all hooks are safely called) ---
 
   // Display a message if no routes are selected
-  // This is a UI-level conditional, not a hook-level conditional.
   if (selectedRoutes.length === 0) {
     return (
       <div className='flex-1 flex items-center justify-center'>
@@ -334,7 +428,6 @@ export const MapCanvas = () => {
     );
   }
 
-  // Display error state
   if (isError) {
     return (
       <div className='flex-1 flex items-center justify-center'>
@@ -357,14 +450,14 @@ export const MapCanvas = () => {
         url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
       />
 
-      {/* All map layer components are now rendered unconditionally by MapCanvas.
-          They handle their own internal rendering based on props/data. */}
+      {/* UniqueStopMarkerRenderer will display markers ONLY at stop locations */}
+      <UniqueStopMarkerRenderer stopLocations={stopLocations || []} />
+
+      {/* AllTripsPolylineLayer will now ONLY draw lines using shape data if available */}
       <AllTripsPolylineLayer
         trips={tripsToRender}
-        stopLocations={stopLocations || []}
+        stopLocations={stopLocations || []} // stopLocations passed, but not used for drawing lines in TripPolylineIndividual
       />
-
-      <UniqueStopMarkerRenderer stopLocations={stopLocations || []} />
 
       <MapUpdater positions={allMapPositions} />
     </MapContainer>
