@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { devtools, persist } from "zustand/middleware";
-import { Trip } from "~/db/schema/trips";
-import type {} from "@redux-devtools/extension"; // required for devtools typing
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+import { Trip } from '~/db/schema/trips';
+import type {} from '@redux-devtools/extension'; // required for devtools typing
 
 export interface SelectedRoute {
   name: string;
@@ -19,18 +19,3 @@ export const useSelectedRoutesStore = create<SelectedRoutesState>((set) => ({
       selectedRoutes: [...state.selectedRoutes, route],
     })),
 }));
-
-// EXMAPLE OF PERSISTANCE
-// const useBearStore = create<SelectedRoutesState>()(
-//   devtools(
-//     persist(
-//       (set) => ({
-//         bears: 0,
-//         increase: (by) => set((state) => ({ bears: state.bears + by })),
-//       }),
-//       {
-//         name: 'bear-storage',
-//       }
-//     )
-//   )
-// );

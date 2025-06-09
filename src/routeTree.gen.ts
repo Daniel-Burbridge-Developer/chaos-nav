@@ -12,12 +12,26 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as IndexImport } from './routes/index'
+import { Route as LivetimesIndexImport } from './routes/livetimes/index'
+import { Route as LivetimesDONOTUSEImport } from './routes/livetimes/DO NOT USE'
 
 // Create/Update Routes
 
 const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const LivetimesIndexRoute = LivetimesIndexImport.update({
+  id: '/livetimes/',
+  path: '/livetimes/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const LivetimesDONOTUSERoute = LivetimesDONOTUSEImport.update({
+  id: '/livetimes/DO NOT USE',
+  path: '/livetimes/DO NOT USE',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -32,6 +46,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexImport
       parentRoute: typeof rootRoute
     }
+    '/livetimes/DO NOT USE': {
+      id: '/livetimes/DO NOT USE'
+      path: '/livetimes/DO NOT USE'
+      fullPath: '/livetimes/DO NOT USE'
+      preLoaderRoute: typeof LivetimesDONOTUSEImport
+      parentRoute: typeof rootRoute
+    }
+    '/livetimes/': {
+      id: '/livetimes/'
+      path: '/livetimes'
+      fullPath: '/livetimes'
+      preLoaderRoute: typeof LivetimesIndexImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -39,32 +67,42 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/livetimes/DO NOT USE': typeof LivetimesDONOTUSERoute
+  '/livetimes': typeof LivetimesIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/livetimes/DO NOT USE': typeof LivetimesDONOTUSERoute
+  '/livetimes': typeof LivetimesIndexRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
+  '/livetimes/DO NOT USE': typeof LivetimesDONOTUSERoute
+  '/livetimes/': typeof LivetimesIndexRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/livetimes/DO NOT USE' | '/livetimes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/livetimes/DO NOT USE' | '/livetimes'
+  id: '__root__' | '/' | '/livetimes/DO NOT USE' | '/livetimes/'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LivetimesDONOTUSERoute: typeof LivetimesDONOTUSERoute
+  LivetimesIndexRoute: typeof LivetimesIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LivetimesDONOTUSERoute: LivetimesDONOTUSERoute,
+  LivetimesIndexRoute: LivetimesIndexRoute,
 }
 
 export const routeTree = rootRoute
@@ -77,11 +115,19 @@ export const routeTree = rootRoute
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/"
+        "/",
+        "/livetimes/DO NOT USE",
+        "/livetimes/"
       ]
     },
     "/": {
       "filePath": "index.tsx"
+    },
+    "/livetimes/DO NOT USE": {
+      "filePath": "livetimes/DO NOT USE.tsx"
+    },
+    "/livetimes/": {
+      "filePath": "livetimes/index.tsx"
     }
   }
 }
