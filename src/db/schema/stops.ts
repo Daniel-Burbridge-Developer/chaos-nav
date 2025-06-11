@@ -14,9 +14,9 @@ export const stops = pgTable(
     name: text("name").notNull(),
     lat: real("lat"),
     lon: real("lon"),
-    zone_id: text("zone_id"),
+    zoneId: text("zone_id"),
     // Change supported_modes to jsonb to store an array of strings
-    supported_modes: jsonb("supported_modes").$type<string[]>(),
+    supportedModes: jsonb("supported_modes").$type<string[]>(),
   },
   (stops) => [index("name_idx").on(stops.name)]
 );

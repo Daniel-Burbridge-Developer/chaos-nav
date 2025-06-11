@@ -1,17 +1,17 @@
-import { pgTable, integer, text, index } from 'drizzle-orm/pg-core';
+import { pgTable, integer, text, index } from "drizzle-orm/pg-core";
 
 export const routes = pgTable(
-  'routes',
+  "routes",
   {
-    id: text('id').primaryKey().notNull().unique(),
-    agency_id: text('agency_id').notNull(),
-    short_name: text('short_name'),
-    long_name: text('long_name'),
-    type: integer('type').notNull(),
+    id: text("id").primaryKey().notNull().unique(),
+    agencyId: text("agency_id").notNull(),
+    shortName: text("short_name"),
+    longName: text("long_name"),
+    type: integer("type").notNull(),
   },
   (routes) => [
-    index('short_name_idx').on(routes.short_name),
-    index('long_name_idx').on(routes.long_name),
+    index("short_name_idx").on(routes.shortName),
+    index("long_name_idx").on(routes.longName),
   ]
 );
 

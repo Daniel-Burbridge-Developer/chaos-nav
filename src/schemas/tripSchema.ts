@@ -1,7 +1,6 @@
-// In your Zod schema file (e.g., 'src/lib/schemas.ts')
 import { z } from "zod";
 
-export const TripStopZodSchema = z.object({
+export const StopPointZodSchema = z.object({
   id: z
     .string()
     .describe("ID of the stop associated with this stopSequence in the trip"),
@@ -10,7 +9,7 @@ export const TripStopZodSchema = z.object({
     .describe(
       "the scheduled arrival time for this stop, I don't currently use this"
     ),
-  stopSequence: z
+  Sequence: z
     .number()
     .describe("which stop this is in the sequence of stops for the trip"),
 });
@@ -41,11 +40,11 @@ export const TripSelectZodSchema = z.object({
     .optional()
     .describe("Identifier for the shape (path) of the trip"),
   stops: z
-    .array(TripStopZodSchema)
+    .array(StopPointZodSchema)
     .describe("Ordered list of stops for this trip"),
 });
 
 export type Trip = z.infer<typeof TripSelectZodSchema>;
 //Work around as could not create with drizzle-zod due to JsonB
-export type NewTrip = z.infer<typeof TripSelectZodSchema>; // For create operations
-export type TripStop = z.infer<typeof TripStopZodSchema>; // For your nested type
+export type NewTrip = z.infer<typeof TripSelectZodSchema>;
+export type TripStop = z.infer<typeof StopPointZodSchema>;

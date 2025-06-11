@@ -1,14 +1,24 @@
 import { z } from "zod";
-import { createSelectSchema } from "drizzle-zod";
-import { stops } from "@/db/schema/stops";
 
-// Create base schema from drizzle-zod (will skip unsupported fields)
-const baseStopSelectZodSchema = createSelectSchema(stops);
+export const SupportedModeZodSchema = z
+  .enum(["Bus", "Rail", "School Bus", "Ferry"])
+  .describe("Different modes of transport for Transperth");
 
-// Extend with supported_modes as an array of strings
-export const stopSchema = baseStopSelectZodSchema.extend({
-  supported_modes: z.array(z.string()).optional(),
+export const StopSelectZodSchema = z.object({
+  id: z.number().describe("Unique identifier for the stop"),
+  name: z.string().describe("Name of the stop"),
+  lat: z.number().describe("Latitude of the stop for geographical mapping"),
+  lon: z.number().describe("Longtitude of the stop for geographical mapping"),
+  zoneId: z
+    .string()
+    .nullable()
+    .describe("Zone used for mapping and pricing - I don't use this"),
+  supportedModes: z
+    .array(SupportedModeZodSchema)
+    .describe("differnt types of vehicles that can use this stop"),
 });
 
-export type Stop = z.infer<typeof stopSchema>;
-export type NewStop = z.infer<typeof stopSchema>; // For create operations
+export type Trip = z.infer<typeof StopSelectZodSchema>;
+//Work around as could not create with drizzle-zod due to JsonB
+export type NewTrip = z.infer<typeof StopSelectZodSchema>;
+export type TripStop = z.infer<typeof SupportedModeZodSchema>;
