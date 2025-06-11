@@ -16,7 +16,7 @@ export const ShapeSelectZodSchema = z.object({
     .describe("Ordered list of points for this shape"),
 });
 
-export type Trip = z.infer<typeof ShapeSelectZodSchema>;
+export type Shape = z.infer<typeof ShapeSelectZodSchema>;
 //Work around as could not create with drizzle-zod due to JsonB
-export type NewTrip = z.infer<typeof ShapeSelectZodSchema>;
-export type TripStop = z.infer<typeof ShapePointZodSchema>;
+export type NewShape = z.infer<typeof ShapeSelectZodSchema>;
+export type ShapePoint = z.infer<typeof ShapePointZodSchema>;

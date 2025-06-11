@@ -18,7 +18,7 @@ export const StopSelectZodSchema = z.object({
     .describe("differnt types of vehicles that can use this stop"),
 });
 
-export type Trip = z.infer<typeof StopSelectZodSchema>;
+export type Stop = z.infer<typeof StopSelectZodSchema>;
 //Work around as could not create with drizzle-zod due to JsonB
-export type NewTrip = z.infer<typeof StopSelectZodSchema>;
-export type TripStop = z.infer<typeof SupportedModeZodSchema>;
+export type NewStop = z.infer<typeof StopSelectZodSchema>;
+export type SupportedMode = z.infer<typeof SupportedModeZodSchema>;
