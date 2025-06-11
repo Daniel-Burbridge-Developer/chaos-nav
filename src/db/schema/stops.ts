@@ -5,20 +5,20 @@ import {
   index,
   real,
   jsonb, // Import jsonb
-} from 'drizzle-orm/pg-core';
+} from "drizzle-orm/pg-core";
 
 export const stops = pgTable(
-  'stops',
+  "stops",
   {
-    id: integer('number').notNull().primaryKey(),
-    name: text('name').notNull(),
-    lat: real('lat'),
-    lon: real('lon'),
-    zone_id: text('zone_id'),
+    id: integer("number").notNull().primaryKey(),
+    name: text("name").notNull(),
+    lat: real("lat"),
+    lon: real("lon"),
+    zone_id: text("zone_id"),
     // Change supported_modes to jsonb to store an array of strings
-    supported_modes: jsonb('supported_modes').$type<string[]>(),
+    supported_modes: jsonb("supported_modes").$type<string[]>(),
   },
-  (stops) => [index('name_idx').on(stops.name)]
+  (stops) => [index("name_idx").on(stops.name)]
 );
 
 export type Stop = typeof stops.$inferSelect;

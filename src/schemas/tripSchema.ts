@@ -1,5 +1,5 @@
 // In your Zod schema file (e.g., 'src/lib/schemas.ts')
-import z from "zod";
+import { z } from "zod";
 
 export const TripStopZodSchema = z.object({
   id: z
