@@ -1,10 +1,10 @@
 // In your Zod schema file (e.g., 'src/lib/schemas.ts')
-import { z } from 'zod';
+import z from "zod";
 
 export const TripStopZodSchema = z.object({
   id: z
     .string()
-    .describe('ID of the stop associated with this stopSequence in the trip'),
+    .describe("ID of the stop associated with this stopSequence in the trip"),
   arrivalTime: z
     .string()
     .describe(
@@ -12,12 +12,12 @@ export const TripStopZodSchema = z.object({
     ),
   stopSequence: z
     .number()
-    .describe('which stop this is in the sequence of stops for the trip'),
+    .describe("which stop this is in the sequence of stops for the trip"),
 });
 
 export const TripSelectZodSchema = z.object({
-  id: z.string().describe('Unique identifier for the trip'),
-  routeId: z.string().describe('Identifier for the route this trip belongs to'),
+  id: z.string().describe("Unique identifier for the trip"),
+  routeId: z.string().describe("Identifier for the route this trip belongs to"),
   serviceId: z
     .string()
     .describe(
@@ -27,22 +27,22 @@ export const TripSelectZodSchema = z.object({
     .number()
     .nullable()
     .optional()
-    .describe('Direction of travel for the trip, if applicable (0 or 1)'),
+    .describe("Direction of travel for the trip, if applicable (0 or 1)"),
   tripHeadsign: z
     .string()
     .nullable()
     .optional()
     .describe(
-      'Headsign or display name for the trip, represents the destination'
+      "Headsign or display name for the trip, represents the destination"
     ),
   shapeId: z
     .string()
     .nullable()
     .optional()
-    .describe('Identifier for the shape (path) of the trip'),
+    .describe("Identifier for the shape (path) of the trip"),
   stops: z
     .array(TripStopZodSchema)
-    .describe('Ordered list of stops for this trip'),
+    .describe("Ordered list of stops for this trip"),
 });
 
 export type Trip = z.infer<typeof TripSelectZodSchema>;
