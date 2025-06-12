@@ -63,23 +63,16 @@ export const apiFetch = async <T>(
   // 3. Prepare the request body
   let requestBody: BodyInit | undefined;
   if (data) {
-    // Check if `data` is provided
-    // For methods that typically send a body, set Content-Type and stringify data
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
       headers['Content-Type'] = 'application/json';
       requestBody = JSON.stringify(data);
     } else {
-      // If `data` is provided for a GET request, log a warning or handle appropriately
-      // (GET requests typically don't have a body, data should be in query params)
       console.warn(
         `Warning: Data provided for a ${method} request. It will be ignored as ${method} requests typically don't have a body. Consider using query parameters for GET.`
       );
-      // For this case, we explicitly set requestBody to undefined
       requestBody = undefined;
     }
   } else if (options.body) {
-    // If `data` is NOT provided, but `options.body` (from RequestInit) IS provided
-    // (e.g., if someone passed FormData directly to options.body)
     requestBody = options.body;
   }
 

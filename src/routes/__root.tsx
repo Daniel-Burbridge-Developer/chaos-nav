@@ -12,6 +12,7 @@ import { NotFound } from '~/components/NotFound';
 import appCss from '~/styles/app.css?url';
 import { seo } from '~/utils/seo';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Analytics } from '@vercel/analytics/react';
 
 import L from 'leaflet'; // Import Leaflet library itself
@@ -99,6 +100,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           {children}
           {/* <Toaster richColors closeButton /> */}
           <TanStackRouterDevtools position='bottom-right' />
+          <ReactQueryDevtools initialIsOpen={false} />
           <Analytics />
           <Scripts />
         </body>

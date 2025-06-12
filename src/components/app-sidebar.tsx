@@ -14,7 +14,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '~/components/ui/sidebar';
-import type { BusRoute } from 'types/bus-routes';
+import type { BusRoute } from '~/types/bus-routes';
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {}
 

@@ -12,7 +12,7 @@ import {
   CollapsibleTrigger,
 } from '~/components/ui/collapsible';
 import { useDebouncedSearch } from '../hooks/use-debounced-search';
-import type { BusRoute } from 'types/bus-routes';
+import type { BusRoute } from '~/types/bus-routes';
 
 interface RouteSearchProps {
   onRouteSelect: (route: BusRoute) => void;
